@@ -1,4 +1,10 @@
 import browser from "webextension-polyfill";
+import { StorageManager } from './lib/storage';
+import { GeminiProvider } from './lib/providers/gemini';
+import { OpenAIProvider } from './lib/providers/openai';
+import { ClaudeProvider } from './lib/providers/claude';
+import { OpenRouterProvider } from './lib/providers/openrouter';
+import type { AIModelProvider } from './lib/providers/base';
 
 console.log("Hello from the background!");
 
@@ -7,13 +13,180 @@ const VERIFICATION_CODE = "250912";
 
 browser.runtime.onInstalled.addListener((details) => {
   console.log("Extension installed:", details);
+  if (details.reason === 'install') {
+    browser.runtime.openOptionsPage();
+  }
 });
 
+class BackgroundService {
+  private providers: Map<string, AIModelProvider> = new Map();
+
+  constructor() {
+    this.initializeProviders();
+  }
+
+  private initializeProviders() {
+    // 初始化所有 AI 模型提供者
+    const geminiProvider = new GeminiProvider();
+    const openaiProvider = new OpenAIProvider();
+    const claudeProvider = new ClaudeProvider();
+    const openRouterProvider = new OpenRouterProvider();
+    const grokProvider = new OpenRouterProvider('x-ai/grok-code-fast-1', 'Grok Code Fast');
+
+    this.providers.set(geminiProvider.config.id, geminiProvider);
+    this.providers.set(openaiProvider.config.id, openaiProvider);
+    this.providers.set(claudeProvider.config.id, claudeProvider);
+    this.providers.set(openRouterProvider.config.id, openRouterProvider);
+    this.providers.set(grokProvider.config.id, grokProvider);
+
+    console.log('🤖 AI 模型提供者已初始化:', Array.from(this.providers.keys()));
+  }
+
+  public async handleGenerateReply(
+    data: { postText: string; style: string; prompt: string; model?: string }
+  ): Promise<any> {
+    try {
+      // 使用指定的模型，如果沒有指定則默認使用 Gemini
+      let modelId = data.model;
+      if (!modelId) {
+        modelId = await StorageManager.getSelectedModel();
+      }
+
+      const provider = this.providers.get(modelId);
+
+      if (!provider) {
+        console.error('❌ 未找到模型提供者:', modelId);
+        return {
+          success: false,
+          error: `不支持的 AI 模型: ${modelId}`,
+          debugInfo: `可用模型: ${Array.from(this.providers.keys()).join(', ')}`
+        };
+      }
+
+      console.log('🤖 使用 AI 模型:', provider.config.name);
+
+      // 獲取對應的 API Key
+      const apiKey = await this.getApiKeyForModel(modelId);
+
+      if (!apiKey) {
+        const modelName = provider.config.name;
+        return {
+          success: false,
+          error: `請先設定 ${modelName} 的 API Key`,
+          debugInfo: `模型 ${modelName} 需要 API Key，請前往設定頁面配置`
+        };
+      }
+
+      // 使用提供者生成回覆
+      const result = await provider.generateReply({
+        postText: data.postText,
+        stylePrompt: data.prompt,
+        apiKey: apiKey
+      });
+
+      if (result.success) {
+        console.log('✅ 回覆生成成功，模型:', provider.config.name);
+        return { success: true, reply: result.reply };
+      } else {
+        console.error('❌ 回覆生成失敗:', result.error);
+        return {
+          success: false,
+          error: result.error,
+          debugInfo: result.debugInfo
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ 處理生成回覆請求時發生錯誤:', error);
+      let errorMessage = '生成回覆時發生錯誤';
+      let debugInfo = '';
+
+      if (error instanceof Error) {
+        debugInfo = error.message;
+
+        if (error.message.includes('API_KEY_INVALID') || error.message.includes('invalid_api_key')) {
+          errorMessage = 'API Key 無效，請檢查設定';
+        } else if (error.message.includes('QUOTA_EXCEEDED') || error.message.includes('insufficient_quota')) {
+          errorMessage = 'API 使用額度已超限';
+        } else if (error.message.includes('NETWORK_ERROR')) {
+          errorMessage = '網路連接錯誤，請稍後再試';
+        } else if (error.message.includes('rate_limit_exceeded')) {
+          errorMessage = 'API 請求頻率超限，請稍後再試';
+        }
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        debugInfo: debugInfo
+      };
+    }
+  }
+
+  public async getApiKeyForModel(modelId: string): Promise<string | null> {
+    const keys = await StorageManager.getApiKeys();
+    try {
+      switch (modelId) {
+        case 'gemini-1.5-flash':
+          return keys.geminiApiKey || null;
+
+        case 'gpt-4o':
+          return keys.openaiApiKey || null;
+
+        case 'claude-3-haiku':
+          return keys.claudeApiKey || null;
+
+        case 'google/gemini-2.0-flash-exp:free':
+        case 'x-ai/grok-code-fast-1':
+          return keys.openrouterApiKey || null;
+
+        default:
+          console.error('❌ 未知的模型 ID:', modelId);
+          return null;
+      }
+    } catch (error) {
+      console.error('❌ 獲取 API Key 失敗:', error);
+      return null;
+    }
+  }
+
+  public async handleApiKeyStatus(): Promise<any> {
+    try {
+      const keys = await StorageManager.getApiKeys();
+      const hasGemini = !!keys.geminiApiKey;
+
+      return {
+        hasApiKey: hasGemini, // 保持向後兼容
+        apiKeys: {
+          gemini: hasGemini,
+          openai: !!keys.openaiApiKey,
+          claude: !!keys.claudeApiKey,
+          openrouter: !!keys.openrouterApiKey
+        }
+      };
+    } catch (error) {
+      console.error('❌ 檢查 API Key 狀態失敗:', error);
+      return {
+        hasApiKey: false,
+        apiKeys: {
+          gemini: false,
+          openai: false,
+          claude: false,
+          openrouter: false
+        }
+      };
+    }
+  }
+}
+
+const backgroundService = new BackgroundService();
+
 // 處理來自 content script 的訊息
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request: any, _sender, _sendResponse) => {
+  // Handle existing verification logic
   if (request.action === 'verifyCode') {
     const isValid = request.code === VERIFICATION_CODE;
-    
+
     if (isValid) {
       // 驗證成功，標記為付費用戶
       browser.storage.local.set({
@@ -21,9 +194,23 @@ browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
         verifiedAt: Date.now()
       });
     }
-    
+
     return Promise.resolve({ success: isValid });
   }
-  
-  return Promise.resolve({ success: false });
+
+  // Handle AI logic
+  if (request.type === 'GENERATE_REPLY') {
+    return backgroundService.handleGenerateReply(request.data);
+  }
+
+  if (request.type === 'API_KEY_STATUS') {
+    return backgroundService.handleApiKeyStatus();
+  }
+
+  if (request.type === 'OPEN_OPTIONS') {
+    browser.runtime.openOptionsPage();
+    return Promise.resolve();
+  }
+
+  return undefined;
 });

@@ -1,5 +1,7 @@
 import browser from "webextension-polyfill";
-import { LikeThreshold, DEFAULT_THRESHOLDS } from "./types";
+import { type LikeThreshold, DEFAULT_THRESHOLDS } from "./types";
+import { REPLY_STYLES, STORAGE_KEYS } from './lib/constants';
+import type { ReplyStyle } from './lib/types';
 
 class ThreadsHelper {
   private thresholds: LikeThreshold[] = DEFAULT_THRESHOLDS;
@@ -26,12 +28,26 @@ class ThreadsHelper {
 
   private async init() {
     await this.loadSettings();
-    await this.checkPaymentStatus();
-    this.createObserver();
-    this.processExistingPosts();
-    this.createLogo();
+    await this.loadSettings();
+    const showViralUI = await this.shouldShowViralUI();
+    if (showViralUI) {
+      this.processExistingPosts();
+      this.createObserver();
+      await this.checkPaymentStatus();
+      this.createLogo();
+    }
     this.checkAndCreateExportButton();
     this.setupUrlChangeListener();
+  }
+
+  private async shouldShowViralUI(): Promise<boolean> {
+    try {
+      const result = await browser.storage.local.get(STORAGE_KEYS.SHOW_VIRAL_UI);
+      return result[STORAGE_KEYS.SHOW_VIRAL_UI] !== undefined ? result[STORAGE_KEYS.SHOW_VIRAL_UI] : true; // Default to true
+    } catch (error) {
+      console.error("Failed to check Viral UI setting:", error);
+      return true; // Default to true on error
+    }
   }
 
   private async loadSettings() {
@@ -192,7 +208,7 @@ class ThreadsHelper {
 
   private isRootPost(post: HTMLElement): boolean {
     return !!post.querySelector(
-      'svg[aria-label="轉發"], svg[aria-label="Repost"], svg[aria-label="Share"]'
+      'svg[aria-label="轉發"], svg[aria-label="Repost"], svg[aria-label="Share"], svg[aria-label="分享"]'
     );
   }
 
@@ -280,91 +296,160 @@ class ThreadsHelper {
     }
 
     const hourlyGrowth = this.calculateHourlyGrowth(post);
-    const hasGrowthData = hourlyGrowth !== null && hourlyGrowth !== 0;
+    if (!hourlyGrowth && !isViralPrediction) return; // Don't show if no interesting data
 
-    // 決定顏色和標記類型
-    let buttonColor: string;
-    let buttonText: string;
+    // Design System Configuration
+    let config = {
+      icon: "📈",
+      gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9))", // Emerald
+      text: "Growth",
+      label: `每小時 +${hourlyGrowth} 讚`,
+      glowColor: "rgba(16, 185, 129, 0.4)"
+    };
 
     if (isViralPrediction) {
-      // 爆文預警：綠色
-      const isDark = this.isDarkMode();
-      buttonColor = isDark ? "#34D399" : "#22C55E";
-      buttonText = "🚀";
-    } else if (threshold) {
-      // 一般門檻：使用設定的顏色
-      buttonColor = this.getThemeAdjustedColor(threshold.color);
-      buttonText = "";
-    } else {
-      return; // 沒有門檻也不是爆文預警，不顯示
+      config = {
+        icon: "⚡",
+        gradient: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(59, 130, 246, 0.9))", // Violet -> Blue
+        text: "Trending",
+        label: "爆文預警：近期急速竄升",
+        glowColor: "rgba(139, 92, 246, 0.5)"
+      };
+    } else if (typeof hourlyGrowth === 'number' && hourlyGrowth >= 100) {
+      config = {
+        icon: "🔥",
+        gradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(239, 68, 68, 0.9))", // Orange -> Red
+        text: "Hot",
+        label: `火熱討論：每小時 +${hourlyGrowth} 讚`,
+        glowColor: "rgba(245, 158, 11, 0.5)"
+      };
     }
 
     const bookmarkBtn = document.createElement("div");
     bookmarkBtn.className = "threads-helper-bookmark";
+
+    // Glassmorphism Container Style
     bookmarkBtn.style.cssText = `
-      position: absolute;
-      bottom: 16px;
-      left: 24px;
-      background: ${buttonColor};
-      color: white;
-      border-radius: 8px;
-      font-size: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      z-index: 1000;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding-left: 8px;
-      padding-right: 8px;
-      padding-top: 4px;
-      padding-bottom: 4px;
-      min-width: 24px;
-      height: auto;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      transition: all 0.2s ease;
-      line-height: 1;
-      text-align: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: ${config.gradient};
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255,255,255,0.1) inset;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0.95;
+      margin-right: 16px; 
+      height: 28px;
+      flex-shrink: 0;
+      white-space: nowrap;
     `;
 
-    const growthDisplay = hasGrowthData
-      ? `<div style="font-size: 8px; opacity: 0.9; margin-top: 2px;">+${hourlyGrowth}${
-          typeof hourlyGrowth === "number" ? "/h" : ""
-        }</div>`
-      : "";
-
+    // Content HTML
+    const growthText = typeof hourlyGrowth === 'number' || typeof hourlyGrowth === 'string' ? `+${hourlyGrowth}/h` : '';
     bookmarkBtn.innerHTML = `
-      <div>${buttonText}</div>
-      ${growthDisplay}
+      <span style="font-size: 14px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">${config.icon}</span>
+      <div style="display: flex; flex-direction: column; line-height: 1;">
+        <span style="font-size: 11px; font-weight: 700; color: white; letter-spacing: 0.3px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">${config.text}</span>
+        <span style="font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.9); margin-top: 1px;">${growthText}</span>
+      </div>
+      
+      <!-- Tooltip -->
+      <div class="helper-tooltip" style="
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s, transform 0.2s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        backdrop-filter: blur(4px);
+        margin-bottom: 6px;
+        font-weight: 500;
+        z-index: 110;
+      ">
+        ${config.label}
+        <div style="
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          border-width: 5px;
+          border-style: solid;
+          border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+        "></div>
+      </div>
     `;
 
-    // 為爆文預警添加額外的視覺效果
-    if (isViralPrediction) {
-      bookmarkBtn.style.animation = "pulse 2s infinite";
-      bookmarkBtn.style.border = "2px solid rgba(255,255,255,0.3)";
-
-      // 添加 CSS 動畫
-      if (!document.querySelector("#threads-helper-style")) {
-        const style = document.createElement("style");
-        style.id = "threads-helper-style";
-        style.textContent = `
-          @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-          }
-          @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
-          }
-        `;
-        document.head.appendChild(style);
+    // Interactions
+    bookmarkBtn.onmouseenter = () => {
+      bookmarkBtn.style.transform = "translateY(-2px) scale(1.02)";
+      bookmarkBtn.style.boxShadow = `0 8px 20px ${config.glowColor}, 0 0 0 1px rgba(255,255,255,0.2) inset`;
+      const tooltip = bookmarkBtn.querySelector('.helper-tooltip') as HTMLElement;
+      if (tooltip) {
+        tooltip.style.opacity = '1';
+        tooltip.style.transform = 'translateX(-50%) translateY(-8px)';
       }
+    };
+
+    bookmarkBtn.onmouseleave = () => {
+      bookmarkBtn.style.transform = "translateY(0) scale(1)";
+      bookmarkBtn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255,255,255,0.1) inset";
+      const tooltip = bookmarkBtn.querySelector('.helper-tooltip') as HTMLElement;
+      if (tooltip) {
+        tooltip.style.opacity = '0';
+        tooltip.style.transform = 'translateX(-50%) translateY(-4px)';
+      }
+    };
+
+    // Add styles if not present
+    if (!document.querySelector("#threads-helper-new-style")) {
+      const style = document.createElement("style");
+      style.id = "threads-helper-new-style";
+      style.textContent = `
+        @keyframes subtle-pulse {
+          0% { box-shadow: 0 0 0 0 ${config.glowColor}; }
+          70% { box-shadow: 0 0 0 6px rgba(0,0,0,0); }
+          100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+        }
+      `;
+      document.head.appendChild(style);
     }
 
-    post.style.position = "relative";
+    // Viral specific animation
+    if (isViralPrediction) {
+      bookmarkBtn.style.animation = "subtle-pulse 3s infinite";
+    }
+
+    // Find 'More' button to insert before
+    // Force Absolute Position to avoid clipping/layout issues in small containers
+    bookmarkBtn.style.position = 'absolute';
+    bookmarkBtn.style.top = '10px'; // Move it up slightly to clear text
+    bookmarkBtn.style.right = '56px';
+    bookmarkBtn.style.marginRight = '0';
+    // Add stronger glassmorphism to let text show through if overlapped
+    bookmarkBtn.style.background = config.gradient.replace('0.9', '0.7').replace('0.9', '0.7');
+    bookmarkBtn.style.backdropFilter = "blur(4px)"; // Reduce blur to see text behind slightly better or keep it high? kept high for glass effect, but transparency helps.
+
+
+    // Ensure parent has positioning context
+    const computedStyle = window.getComputedStyle(post);
+    if (computedStyle.position === 'static') {
+      post.style.position = 'relative';
+    }
+
     post.appendChild(bookmarkBtn);
   }
 
@@ -393,18 +478,17 @@ class ThreadsHelper {
         <div style="
           width: 24px;
           height: 24px;
-          background: linear-gradient(45deg, #22C55E, #3B82F6);
           border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
-        ">⚡</div>
+          overflow: hidden;
+        "><img src="${browser.runtime.getURL('sonar-icon.png')}" style="width: 100%; height: 100%; object-fit: cover;" alt="Sonar Icon" /></div>
         <span style="
           font-size: 13px;
           font-weight: 600;
           color: inherit;
-        ">Threads 爆文偵測器</span>
+        ">SonarAgent</span>
       </div>
     `;
 
@@ -413,17 +497,14 @@ class ThreadsHelper {
       position: fixed;
       top: 20px;
       right: 20px;
-      background: ${
-        isDark ? "rgba(38, 38, 38, 0.95)" : "rgba(255, 255, 255, 0.95)"
+      background: ${isDark ? "rgba(38, 38, 38, 0.95)" : "rgba(255, 255, 255, 0.95)"
       };
       color: ${isDark ? "#ffffff" : "#000000"};
       border-radius: 12px;
-      box-shadow: 0 4px 20px ${
-        isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+      box-shadow: 0 4px 20px ${isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
       };
       backdrop-filter: blur(10px);
-      border: 1px solid ${
-        isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
+      border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
       };
       z-index: 10000;
       cursor: pointer;
@@ -444,16 +525,14 @@ class ThreadsHelper {
     // 添加懸停效果
     logo.addEventListener("mouseenter", () => {
       logo.style.transform = "translateY(-2px)";
-      logo.style.boxShadow = `0 8px 30px ${
-        isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.15)"
-      }`;
+      logo.style.boxShadow = `0 8px 30px ${isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.15)"
+        }`;
     });
 
     logo.addEventListener("mouseleave", () => {
       logo.style.transform = "translateY(0)";
-      logo.style.boxShadow = `0 4px 20px ${
-        isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
-      }`;
+      logo.style.boxShadow = `0 4px 20px ${isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+        }`;
     });
   }
 
@@ -517,7 +596,7 @@ class ThreadsHelper {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-          ">Threads 爆文偵測器</h2>
+          ">SonarAgent</h2>
           <p style="
             margin: 0;
             font-size: 16px;
@@ -528,9 +607,8 @@ class ThreadsHelper {
 
 
         <div style="
-          background: ${
-            isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
-          };
+          background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
+      };
           border-radius: 16px;
           padding: 24px;
           margin-bottom: 24px;
@@ -572,9 +650,8 @@ class ThreadsHelper {
         <!-- Verification Code Input (hidden by default) -->
         <div class="verification-section" style="
           display: none;
-          background: ${
-            isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
-          };
+          background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
+      };
           border-radius: 16px;
           padding: 24px;
           margin-bottom: 24px;
@@ -599,8 +676,8 @@ class ThreadsHelper {
           
           <div style="display: flex; gap: 8px; margin-bottom: 16px;">
             ${Array.from(
-              { length: 6 },
-              (_, i) => `
+        { length: 6 },
+        (_, i) => `
               <input 
                 type="text" 
                 class="verification-digit" 
@@ -612,20 +689,18 @@ class ThreadsHelper {
                   text-align: center;
                   font-size: 18px;
                   font-weight: 700;
-                  border: 2px solid ${
-                    isDark ? "rgba(255, 255, 255, 0.2)" : "#e5e5e5"
-                  };
+                  border: 2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "#e5e5e5"
+          };
                   border-radius: 8px;
-                  background: ${
-                    isDark ? "rgba(255, 255, 255, 0.1)" : "#ffffff"
-                  };
+                  background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "#ffffff"
+          };
                   color: inherit;
                   outline: none;
                   transition: all 0.2s ease;
                 "
               />
             `
-            ).join("")}
+      ).join("")}
           </div>
           
           <div class="verification-status" style="
@@ -642,9 +717,8 @@ class ThreadsHelper {
           <button class="modal-later-btn" style="
             flex: 1;
             padding: 12px;
-            background: ${
-              isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-            };
+            background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
+      };
             color: inherit;
             border: none;
             border-radius: 12px;
@@ -673,9 +747,8 @@ class ThreadsHelper {
           <button class="show-verification-btn" style="
             background: none;
             border: none;
-            color: ${
-              isDark ? "rgba(255, 255, 255, 0.6)" : "rgba(0, 0, 0, 0.6)"
-            };
+            color: ${isDark ? "rgba(255, 255, 255, 0.6)" : "rgba(0, 0, 0, 0.6)"
+      };
             cursor: pointer;
             font-size: 12px;
             text-decoration: underline;
@@ -942,17 +1015,14 @@ class ThreadsHelper {
       position: fixed;
       top: ${topPosition};
       right: 20px;
-      background: ${
-        isDark ? "rgba(38, 38, 38, 0.95)" : "rgba(255, 255, 255, 0.95)"
+      background: ${isDark ? "rgba(38, 38, 38, 0.95)" : "rgba(255, 255, 255, 0.95)"
       };
       color: ${isDark ? "#ffffff" : "#000000"};
       border-radius: 12px;
-      box-shadow: 0 4px 20px ${
-        isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+      box-shadow: 0 4px 20px ${isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
       };
       backdrop-filter: blur(10px);
-      border: 1px solid ${
-        isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
+      border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
       };
       z-index: 10000;
       cursor: pointer;
@@ -993,16 +1063,14 @@ class ThreadsHelper {
 
     exportBtn.addEventListener("mouseenter", () => {
       exportBtn.style.transform = "translateY(-2px)";
-      exportBtn.style.boxShadow = `0 8px 30px ${
-        isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.15)"
-      }`;
+      exportBtn.style.boxShadow = `0 8px 30px ${isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.15)"
+        }`;
     });
 
     exportBtn.addEventListener("mouseleave", () => {
       exportBtn.style.transform = "translateY(0)";
-      exportBtn.style.boxShadow = `0 4px 20px ${
-        isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
-      }`;
+      exportBtn.style.boxShadow = `0 4px 20px ${isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+        }`;
     });
 
     document.body.appendChild(exportBtn);
@@ -1033,7 +1101,7 @@ class ThreadsHelper {
 
   private showResultsModal() {
     if (this.resultsModalElement) return;
-    
+
     // 確保其他 modal 已關閉
     if (this.modalElement) {
       this.modalElement.remove();
@@ -1118,9 +1186,8 @@ class ThreadsHelper {
               height: 100%;
               min-height: 200px;
               padding: 16px;
-              border: 2px solid ${
-                isDark ? "rgba(255, 255, 255, 0.2)" : "#e5e5e5"
-              };
+              border: 2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "#e5e5e5"
+      };
               border-radius: 12px;
               font-size: 12px;
               font-family: 'SF Mono', Consolas, monospace;
@@ -1168,9 +1235,8 @@ class ThreadsHelper {
             flex: 1;
             min-width: 120px;
             padding: 12px 16px;
-            background: ${
-              isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-            };
+            background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
+      };
             color: inherit;
             border: none;
             border-radius: 12px;
@@ -1273,7 +1339,7 @@ class ThreadsHelper {
 
   private showScraperModal() {
     if (this.scraperModalElement) return;
-    
+
     // 確保其他 modal 已關閉
     if (this.modalElement) {
       this.modalElement.remove();
@@ -1355,12 +1421,10 @@ class ThreadsHelper {
           <div class="preset-options" style="display: grid; gap: 12px;">
             <div class="preset-option" data-preset="quick" style="
               padding: 16px 20px;
-              background: ${
-                isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"
-              };
-              border: 2px solid ${
-                isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
-              };
+              background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"
+      };
+              border: 2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
+      };
               border-radius: 16px;
               cursor: pointer;
               transition: all 0.2s ease;
@@ -1385,12 +1449,10 @@ class ThreadsHelper {
             
             <div class="preset-option" data-preset="deep" style="
               padding: 16px 20px;
-              background: ${
-                isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"
-              };
-              border: 2px solid ${
-                isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
-              };
+              background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"
+      };
+              border: 2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
+      };
               border-radius: 16px;
               cursor: pointer;
               transition: all 0.2s ease;
@@ -1401,12 +1463,10 @@ class ThreadsHelper {
             
             <div class="preset-option" data-preset="popular" style="
               padding: 16px 20px;
-              background: ${
-                isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"
-              };
-              border: 2px solid ${
-                isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
-              };
+              background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"
+      };
+              border: 2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
+      };
               border-radius: 16px;
               cursor: pointer;
               transition: all 0.2s ease;
@@ -1417,12 +1477,10 @@ class ThreadsHelper {
             
             <div class="preset-option" data-preset="custom" style="
               padding: 16px 20px;
-              background: ${
-                isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)"
-              };
-              border: 2px dashed ${
-                isDark ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.2)"
-              };
+              background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)"
+      };
+              border: 2px dashed ${isDark ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.2)"
+      };
               border-radius: 16px;
               cursor: pointer;
               transition: all 0.2s ease;
@@ -1436,9 +1494,8 @@ class ThreadsHelper {
         <!-- Custom Settings (hidden by default) -->
         <div class="custom-settings-section" style="
           display: none;
-          background: ${
-            isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
-          };
+          background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
+      };
           border-radius: 16px;
           padding: 24px;
           margin-bottom: 24px;
@@ -1565,9 +1622,8 @@ class ThreadsHelper {
           <button class="scraper-cancel-btn" style="
             flex: 1;
             padding: 16px;
-            background: ${
-              isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-            };
+            background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
+      };
             color: inherit;
             border: none;
             border-radius: 50px;
@@ -1621,9 +1677,8 @@ class ThreadsHelper {
             ? "rgba(255, 255, 255, 0.1)"
             : "rgba(0, 0, 0, 0.05)";
           (opt as HTMLElement).style.color = isDark ? "#ffffff" : "#000000";
-          (opt as HTMLElement).style.border = `2px solid ${
-            isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
-          }`;
+          (opt as HTMLElement).style.border = `2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"
+            }`;
           (opt as HTMLElement).style.transform = "scale(1)";
         });
 
@@ -1633,13 +1688,12 @@ class ThreadsHelper {
           ? "#ffffff"
           : "#000000";
         (option as HTMLElement).style.color = isDark ? "#000000" : "#ffffff";
-        (option as HTMLElement).style.border = `2px solid ${
-          isDark ? "#ffffff" : "#000000"
-        }`;
+        (option as HTMLElement).style.border = `2px solid ${isDark ? "#ffffff" : "#000000"
+          }`;
         (option as HTMLElement).style.transform = "scale(1.02)";
 
         selectedPreset = option.getAttribute("data-preset") || "standard";
-        
+
         // 顯示/隱藏自訂設定區域
         const customSection = modal.querySelector('.custom-settings-section') as HTMLElement;
         if (customSection) {
@@ -1814,9 +1868,8 @@ class ThreadsHelper {
           <button class="warning-cancel-btn" style="
             flex: 1;
             padding: 12px 20px;
-            background: ${
-              isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-            };
+            background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
+      };
             color: inherit;
             border: none;
             border-radius: 50px;
@@ -2141,8 +2194,514 @@ class ThreadsHelper {
   }
 }
 
+class ThreadsAIAssistant {
+  private observer: MutationObserver | null = null;
+  private isInjected = false;
+
+  constructor() {
+    this.init();
+    console.log('🤖 Threads AI Assistant 已載入');
+  }
+
+  private init() {
+    if (this.isInjected) return;
+    this.isInjected = true;
+
+    this.injectButtons();
+    this.startObserver();
+    this.setupMessageListener();
+  }
+
+  private injectButtons() {
+    const posts = this.findPosts();
+    // console.log(`🔍 找到 ${posts.length} 個貼文`);
+    posts.forEach((post) => {
+      this.addButtonToPost(post);
+    });
+  }
+
+  private findPosts(): Element[] {
+    // 多種選擇器來匹配 Threads 的不同貼文結構
+    const selectors = [
+      '[data-pressable-container="true"]',
+      'article',
+      '[role="article"]',
+      'div[style*="border"]',
+      'div[data-testid*="post"]',
+      'div[data-testid*="thread"]',
+      // 針對 Activity 頁面的額外選擇器
+      'div[role="button"]:has(span[dir="auto"])',
+      'div[role="link"]:has(span[dir="auto"])'
+    ];
+
+    let posts: Element[] = [];
+
+    for (const selector of selectors) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        posts = posts.concat(Array.from(elements));
+      } catch (e) {
+        // Ignore invalid selectors if any
+      }
+    }
+
+    // 去重並過濾有效貼文
+    const uniquePosts = posts.filter((post, index, arr) =>
+      arr.indexOf(post) === index
+    );
+
+    return uniquePosts.filter(post => {
+      // 排除太小的元素 (可能是按鈕本身)
+      if (post.getBoundingClientRect().height < 50) return false;
+
+      // 檢查是否包含文字內容
+      const hasText = post.querySelector('[dir="auto"]') ||
+        post.querySelector('p') ||
+        post.querySelector('span') ||
+        (post.textContent && post.textContent.trim().length > 5); // 放寬文字長度限制
+
+      // 檢查是否有互動按鈕（讚、回覆等）
+      // 在 Activity 頁面，可能沒有明確的角色為 button 的互動區，但會有文字和結構
+      // 所以我們放寬對 Actions 的檢查，只要看起來像貼文即可
+      const hasActions = post.querySelector('[role="button"]') ||
+        post.querySelector('button') ||
+        post.querySelector('[aria-label*="like"]') ||
+        post.querySelector('[aria-label*="reply"]') ||
+        post.querySelector('[aria-label*="讚"]') ||
+        post.querySelector('[aria-label*="回覆"]');
+
+      // 或者它是 Activity 頁面的一個項目 (通常有時間戳)
+      const hasTime = post.querySelector('time');
+
+      // 確保還沒有添加我們的按鈕
+      const alreadyHasButton = post.querySelector('.threads-ai-button');
+
+      return hasText && (hasActions || hasTime) && !alreadyHasButton;
+    });
+  }
+
+  private addButtonToPost(post: Element) {
+    if (post.querySelector('.threads-ai-button')) {
+      return;
+    }
+
+    const aiButton = this.createAIButton(post);
+
+    // 優先尋找分享按鈕
+    const shareButton = post.querySelector('div[role="button"][aria-label="分享"], div[role="button"][aria-label="Share"], svg[aria-label="分享"], svg[aria-label="Share"]')?.closest('div[role="button"]');
+
+    if (shareButton) {
+      shareButton.after(aiButton);
+    } else {
+      // 嘗試多種方式找到動作按鈕容器 (Fallback)
+      let actionsContainer = post.querySelector('[style*="flex-direction: row"]') ||
+        post.querySelector('[style*="display: flex"]') ||
+        post.querySelector('div[role="group"]') ||
+        post.querySelector('div:has(> button)') ||
+        post.querySelector('div:has([role="button"])');
+
+      // 如果找不到容器，嘗試找到任何按鈕並取其父元素
+      if (!actionsContainer) {
+        const anyButton = post.querySelector('button') || post.querySelector('[role="button"]');
+        if (anyButton) {
+          actionsContainer = anyButton.parentElement;
+        }
+      }
+
+      const container = actionsContainer as HTMLElement;
+      if (container) {
+        container.appendChild(aiButton);
+      }
+    }
+  }
+
+  private createAIButton(post: Element): HTMLElement {
+    const button = document.createElement('button');
+    button.className = 'threads-ai-button';
+    button.style.cssText = `
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      margin-left: 8px;
+      transition: all 0.2s ease;
+      font-size: 18px;
+      color: #65676b;
+    `;
+
+    button.innerHTML = '✨';
+    button.title = 'AI 智慧回覆';
+
+    button.addEventListener('mouseenter', () => {
+      button.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+      button.style.transform = 'scale(1.1)';
+    });
+
+    button.addEventListener('mouseleave', () => {
+      button.style.backgroundColor = 'transparent';
+      button.style.transform = 'scale(1)';
+    });
+
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.showStyleSelector(post, button);
+    });
+
+    return button;
+  }
+
+  private showStyleSelector(post: Element, button: HTMLElement) {
+    this.hideExistingSelectors();
+
+    const selector = this.createStyleSelector(post);
+    const rect = button.getBoundingClientRect();
+
+    selector.style.position = 'fixed';
+    selector.style.top = `${rect.bottom + 8}px`;
+    selector.style.left = `${rect.left}px`;
+    selector.style.zIndex = '10000';
+
+    document.body.appendChild(selector);
+
+    setTimeout(() => {
+      const handleClickOutside = (e: Event) => {
+        if (!selector.contains(e.target as Node)) {
+          selector.remove();
+          document.removeEventListener('click', handleClickOutside);
+        }
+      };
+      document.addEventListener('click', handleClickOutside);
+    }, 100);
+  }
+
+  private createStyleSelector(post: Element): HTMLElement {
+    const selector = document.createElement('div');
+    selector.className = 'threads-ai-selector';
+    selector.style.cssText = `
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      padding: 8px;
+      min-width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = `
+      padding: 12px 16px 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #1c1e21;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 8px;
+    `;
+    title.textContent = '選擇回覆風格';
+    selector.appendChild(title);
+
+    REPLY_STYLES.forEach(style => {
+      const option = this.createStyleOption(style, post);
+      selector.appendChild(option);
+    });
+
+    return selector;
+  }
+
+  private createStyleOption(style: ReplyStyle, post: Element): HTMLElement {
+    const option = document.createElement('div');
+    option.style.cssText = `
+      padding: 12px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: background-color 0.2s ease;
+    `;
+
+    option.innerHTML = `
+      <div style="font-weight: 500; font-size: 14px; color: #1c1e21; margin-bottom: 2px;">
+        ${style.name}
+      </div>
+      <div style="font-size: 12px; color: #65676b;">
+        ${style.description}
+      </div>
+    `;
+
+    option.addEventListener('mouseenter', () => {
+      option.style.backgroundColor = '#f2f3f5';
+    });
+
+    option.addEventListener('mouseleave', () => {
+      option.style.backgroundColor = 'transparent';
+    });
+
+    option.addEventListener('click', () => {
+      this.generateReply(post, style);
+      this.hideExistingSelectors();
+    });
+
+    return option;
+  }
+
+  private async generateReply(post: Element, style: ReplyStyle) {
+    const postText = this.extractPostText(post);
+    if (!postText) {
+      this.showError('無法讀取貼文內容');
+      return;
+    }
+
+    const replyInput = this.findReplyInput(post);
+    if (!replyInput) {
+      this.showError('找不到回覆輸入框，請先點擊回覆按鈕');
+      return;
+    }
+
+    this.showLoadingState();
+
+    try {
+      const response = await browser.runtime.sendMessage({
+        type: 'GENERATE_REPLY',
+        data: {
+          postText,
+          style: style.id,
+          prompt: style.prompt
+        }
+      });
+
+      if (response && response.success) {
+        this.fillReplyInput(replyInput as HTMLInputElement, response.reply);
+      } else {
+        if (response && response.error && (response.error.includes('Key') || response.error === 'NO_API_KEY')) {
+          this.showApiKeyPrompt();
+        } else {
+          this.showError(response?.error || '生成回覆時發生錯誤');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating reply:', error);
+      this.showError('連接服務時發生錯誤');
+    } finally {
+      this.hideLoadingState();
+    }
+  }
+
+  private extractPostText(post: Element): string {
+    const textElements = post.querySelectorAll('[dir="auto"]');
+    const texts = Array.from(textElements)
+      .map(el => el.textContent?.trim())
+      .filter(text => text && text.length > 0);
+
+    return texts.join(' ').slice(0, 1000);
+  }
+
+  private findReplyInput(post: Element): Element | null {
+    // 試著找附近的 textarea 或 contenteditable
+    let current = post.nextElementSibling;
+    let attempts = 0;
+
+    // 向下尋找
+    while (current && attempts < 5) {
+      const input = current.querySelector('textarea[placeholder*="回覆"], textarea[placeholder*="reply"], [contenteditable="true"]');
+      if (input) return input;
+
+      current = current.nextElementSibling;
+      attempts++;
+    }
+
+    // 全局尋找（當彈出 modal 時）
+    return document.querySelector('textarea[placeholder*="回覆"], textarea[placeholder*="reply"], [contenteditable="true"]');
+  }
+
+  private showLoadingState() {
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.id = 'threads-ai-loading';
+    loadingIndicator.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 10001;
+    `;
+    loadingIndicator.textContent = '🤖 AI 正在生成回覆...';
+    document.body.appendChild(loadingIndicator);
+  }
+
+  private hideLoadingState() {
+    const loading = document.getElementById('threads-ai-loading');
+    if (loading) {
+      loading.remove();
+    }
+  }
+
+  private fillReplyInput(input: HTMLInputElement | HTMLTextAreaElement, text: string) {
+    // 聚焦輸入框
+    input.focus();
+
+    // 模擬用戶輸入
+    if (input.tagName === 'TEXTAREA') {
+      (input as HTMLTextAreaElement).value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (input.hasAttribute('contenteditable')) {
+      input.textContent = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // 嘗試使用 document.execCommand 作為後備方案
+    try {
+      document.execCommand('insertText', false, text);
+    } catch (e) {
+      // 忽略錯誤
+    }
+
+    this.showSuccessMessage();
+  }
+
+  private showSuccessMessage() {
+    const message = document.createElement('div');
+    message.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #42a645;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 10001;
+      animation: fadeIn 0.3s ease;
+    `;
+    message.textContent = '✅ 回覆已生成！';
+
+    document.body.appendChild(message);
+    setTimeout(() => message.remove(), 3000);
+  }
+
+  private showError(errorMessage: string) {
+    const message = document.createElement('div');
+    message.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #e74c3c;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 10001;
+    `;
+    message.textContent = `❌ ${errorMessage}`;
+
+    document.body.appendChild(message);
+    setTimeout(() => message.remove(), 5000);
+  }
+
+  private showApiKeyPrompt() {
+    const prompt = document.createElement('div');
+    prompt.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      z-index: 10001;
+      text-align: center;
+      max-width: 400px;
+    `;
+
+    prompt.innerHTML = `
+      <div style="font-size: 18px; margin-bottom: 16px;">🔑</div>
+      <div style="font-weight: 600; margin-bottom: 8px; color: #1c1e21;">
+        需要設定 API Key
+      </div>
+      <div style="color: #65676b; margin-bottom: 20px; font-size: 14px;">
+        請先前往設定頁面輸入您的 Gemini/OpenAI/Claude API Key
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button id="open-settings" style="
+          background: #1877f2;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        ">前往設定</button>
+        <button id="close-prompt" style="
+          background: #e4e6ea;
+          color: #1c1e21;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        ">稍後</button>
+      </div>
+    `;
+
+    document.body.appendChild(prompt);
+
+    prompt.querySelector('#open-settings')?.addEventListener('click', () => {
+      browser.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+      prompt.remove();
+    });
+
+    prompt.querySelector('#close-prompt')?.addEventListener('click', () => {
+      prompt.remove();
+    });
+  }
+
+  private hideExistingSelectors() {
+    const existing = document.querySelectorAll('.threads-ai-selector');
+    existing.forEach(el => el.remove());
+  }
+
+  private startObserver() {
+    this.observer = new MutationObserver((mutations) => {
+      let shouldUpdate = false;
+
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          shouldUpdate = true;
+        }
+      });
+
+      if (shouldUpdate) {
+        setTimeout(() => this.injectButtons(), 500);
+      }
+    });
+
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  private setupMessageListener() {
+    browser.runtime.onMessage.addListener((message: any, _sender, _sendResponse) => {
+      if (message.type === 'SHOW_ERROR') {
+        this.showError(message.data);
+      }
+    });
+  }
+}
+
 // 全域實例引用
 let threadsHelperInstance: ThreadsHelper;
+let threadsAIAssistantInstance: ThreadsAIAssistant;
 
 if (typeof window !== "undefined") {
   threadsHelperInstance = new ThreadsHelper();
@@ -2157,6 +2716,15 @@ if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
     threadsHelperInstance.cleanup();
   });
+
+  // Initialize AI Assistant
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      threadsAIAssistantInstance = new ThreadsAIAssistant();
+    });
+  } else {
+    threadsAIAssistantInstance = new ThreadsAIAssistant();
+  }
 }
 
-export { ThreadsHelper };
+export { ThreadsHelper, ThreadsAIAssistant };
