@@ -1531,15 +1531,12 @@ class ThreadsAIAssistant {
       return;
     }
 
-    const loadingMessage = showStyleName
-      ? `正在使用「${style.name}」風格生成...`
-      : 'AI 正在思考中...';
-
-    // No contextSnippet available here easily, so passing null is safer to avoid ReferenceError
-    this.showLoadingState(loadingMessage, null);
+    // Extract a short snippet of the context to display
+    const contextSnippet = finalPostText.replace(/\s+/g, ' ').substring(0, 30) + '...';
+    const loadingMessage = `✨ 使用「${style.name}」風格生成中...`;
+    this.showLoadingState(loadingMessage, contextSnippet);
 
     try {
-      this.showLoadingState('✨ AI 正在生成回覆...');
 
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
