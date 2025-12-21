@@ -106,10 +106,20 @@ class BackgroundService {
       if (result.success) {
         console.log('✅ 回覆生成成功，模型:', provider.config.name);
 
-        // **Control Token Cleaning**
-        // Remove Grok/LLM internal control tokens like <|control633|>, <|endoftext|>, etc.
+        // **Control Token & Hallucination Cleaning**
         let rawReply = result.reply || '';
-        let cleanReply = rawReply.replace(/<\|.*?\|>/g, '').trim();
+
+        // 1. Remove LLM internal control tokens
+        let cleanReply = rawReply.replace(/<\|.*?\|>/g, '');
+
+        // 2. Remove Hallucinated Multilingual Garbage (Cyrillic, Arabic, etc.)
+        // Grok sometimes spits out random Russian/Persian/English noise at the end.
+        // We aggressively strip characters that shouldn't be in a Traditional Chinese/English/Kaomoji reply.
+        // Stripping Cyrillic (Russian) and Arabic script ranges.
+        cleanReply = cleanReply.replace(/[\u0400-\u04FF\u0600-\u06FF]+/g, '');
+
+        // 3. Trim whitespace
+        cleanReply = cleanReply.trim();
 
         return { success: true, reply: cleanReply };
       } else {
