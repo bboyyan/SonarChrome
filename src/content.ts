@@ -1342,7 +1342,7 @@ class ThreadsAIAssistant {
     return option;
   }
 
-  private showLoadingState(message: string = 'AI 正在思考中...') {
+  private showLoadingState(message: string = 'AI 正在思考中...', contextSnippet: string | null = null) {
     let toast = document.getElementById('threads-ai-toast');
     if (!toast) {
       toast = document.createElement('div');
@@ -1354,23 +1354,33 @@ class ThreadsAIAssistant {
         transform: translateX(-50%);
         background: #1c1e21;
         color: white;
-        padding: 10px 20px;
-        border-radius: 99px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         font-size: 14px;
         display: flex;
-        align-items: center;
-        gap: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
         z-index: 10001;
         opacity: 0;
         transition: opacity 0.3s ease;
+        max-width: 90vw;
       `;
       document.body.appendChild(toast);
     }
 
-    toast.innerHTML = `<span class="spinner"></span> <span>${message}</span>`;
-    // Add spinner style if needed, or simple text
-    // Simple spinner in CSS
+    let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span> <span style="font-weight: 500;">${message}</span></div>`;
+
+    if (contextSnippet) {
+      // Truncate if too long (although caller should probably truncate)
+      const safeSnippet = contextSnippet.length > 20 ? contextSnippet.substring(0, 20) + '...' : contextSnippet;
+      html += `<div style="font-size: 12px; color: #b0b3b8; padding-left: 24px;">📄 已連結主文：「${safeSnippet}」</div>`;
+    }
+
+    toast.innerHTML = html;
+
+    // Add spinner style if needed
     const style = document.createElement('style');
     style.textContent = `
       .spinner {
@@ -1380,6 +1390,7 @@ class ThreadsAIAssistant {
         border-top: 2px solid transparent;
         border-radius: 50%;
         animation: spin 1s linear infinite;
+        flex-shrink: 0;
       }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
@@ -1483,7 +1494,10 @@ class ThreadsAIAssistant {
     const loadingMessage = showStyleName
       ? `正在使用「${style.name}」風格生成...`
       : 'AI 正在思考中...';
-    this.showLoadingState(loadingMessage);
+
+    // Pass captured context snippet if available (Clean newlines for display)
+    const contextSnippet = contextText ? contextText.replace(/\s+/g, ' ').substring(0, 20) : null;
+    this.showLoadingState(loadingMessage, contextSnippet);
 
     try {
       // Re-calculate isSelfPost here
