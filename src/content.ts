@@ -1434,22 +1434,27 @@ class ThreadsAIAssistant {
       // Strategy B: Feed View (Sibling Grouping)
       // If we didn't find it (or not in detail view), look for the "First Sibling" in the current cluster.
       if (!rootPost) {
-        // In Feed, a thread cluster is usually wrapped in a div.
-        // We go up 1-2 levels to find the cluster wrapper.
-        // Heuristic: The cluster wrapper usually contains multiple `data-pressable-container`.
-        const parent = post.parentElement;
-        if (parent) {
-          const siblings = parent.querySelectorAll('[data-pressable-container="true"]');
-          if (siblings.length > 0) {
-            rootPost = siblings[0];
+        let currentLevel = post.parentElement;
+        // Traverse up to 6 levels to find the cluster wrapper
+        // Threads DOM structure is deep. A thread unit usually groups the main post and replies.
+        for (let i = 0; i < 6; i++) {
+          if (!currentLevel || currentLevel.tagName === 'BODY' || currentLevel.tagName === 'MAIN') break;
+
+          // Look for all pressable containers (posts) in this level
+          // scope:scope is not needed, just querySelectorAll
+          const candidates = currentLevel.querySelectorAll('[data-pressable-container="true"]');
+
+          // If we found multiple posts in this container, the first one is likely the Root Context.
+          if (candidates.length > 1) {
+            const first = candidates[0];
+            // Ensure the first one is visually before the current one (it acts as header)
+            // And ensure it's not the current post itself
+            if (first !== post && first.compareDocumentPosition(post) & Node.DOCUMENT_POSITION_FOLLOWING) {
+              rootPost = first;
+              break;
+            }
           }
-        }
-        // Try one level higher if needed? (Usually direct parent is enough for the recursive structure)
-        if (!rootPost && post.parentElement?.parentElement) {
-          const grandSiblings = post.parentElement.parentElement.querySelectorAll('[data-pressable-container="true"]');
-          if (grandSiblings.length > 0) {
-            rootPost = grandSiblings[0];
-          }
+          currentLevel = currentLevel.parentElement;
         }
       }
 
