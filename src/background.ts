@@ -109,8 +109,9 @@ class BackgroundService {
         // **Control Token & Hallucination Cleaning**
         let rawReply = result.reply || '';
 
-        // 1. Remove LLM internal control tokens
-        let cleanReply = rawReply.replace(/<\|.*?\|>/g, '');
+        // 1. Remove LLM internal control tokens & HTML comments
+        let cleanReply = rawReply.replace(/<\|.*?\|>/g, '')
+          .replace(/<!--[\s\S]*?-->/g, '');
 
         // 2. Remove Hallucinated Multilingual Garbage (Cyrillic, Arabic, etc.)
         // Grok sometimes spits out random Russian/Persian/English noise at the end.

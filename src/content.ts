@@ -1343,11 +1343,13 @@ class ThreadsAIAssistant {
   }
 
   private showLoadingState(message: string = 'AI 正在思考中...', contextSnippet: string | null = null) {
-    let toast = document.getElementById('threads-ai-toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'threads-ai-toast';
-      toast.style.cssText = `
+    // Fix Race Condition: Always remove existing toast to cancel any pending fade-out timers
+    const existing = document.getElementById('threads-ai-toast');
+    if (existing) existing.remove();
+
+    let toast = document.createElement('div');
+    toast.id = 'threads-ai-toast';
+    toast.style.cssText = `
         position: fixed;
         bottom: 24px;
         left: 50%;
@@ -1367,8 +1369,7 @@ class ThreadsAIAssistant {
         transition: opacity 0.3s ease;
         max-width: 90vw;
       `;
-      document.body.appendChild(toast);
-    }
+    document.body.appendChild(toast);
 
     let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span> <span style="font-weight: 500;">${message}</span></div>`;
 
