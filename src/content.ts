@@ -1182,6 +1182,41 @@ class ThreadsAIAssistant {
     // Host Mode Toggle
     togglesGroup.appendChild(createToggle('我是樓主', this.isHostMode, (v) => this.isHostMode = v));
 
+    // Smart Select Button
+    const smartBtn = document.createElement('button');
+    smartBtn.textContent = '🧠 智能搭配';
+    smartBtn.className = 'threads-ai-random-btn';
+    smartBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; // Elegant Purple-Blue
+    smartBtn.style.border = 'none';
+    smartBtn.style.color = 'white';
+    smartBtn.title = 'AI 自動分析情境並選擇適合語氣';
+
+    smartBtn.onclick = (e) => {
+      e.stopPropagation();
+
+      // Build list of available styles
+      const stylesList = REPLY_STYLES
+        .map(s => `- 風格名稱: ${s.name} (${s.description || '無描述'})`)
+        .join('\n');
+
+      const autoStyle = {
+        id: 'auto',
+        name: '智能搭配',
+        description: 'AI 自動從現有風格中選擇最佳回應',
+        prompt: `你是 Threads 社交專家。請仔細閱讀貼文與上下文，分析其情緒與意圖。
+接著，請從以下「可用風格列表」中，挑選 **最適合** 且 **最能引起共鳴** 的一種風格來回覆：
+
+【可用風格列表】：
+${stylesList}
+
+【任務規則】：
+1. 請 "Roleplay" 扮演你所選的那種風格，嚴格遵守該風格的語氣、用詞、Emoji 使用習慣。
+2. 直接輸出回覆內容即可，**不要** 輸出你選了哪個風格，也 **不要** 加任何解釋。`
+      };
+      this.generateReply(post, autoStyle, true);
+    };
+
+    headerContainer.appendChild(smartBtn);
     headerContainer.appendChild(randomBtn);
     headerContainer.appendChild(togglesGroup);
     selector.appendChild(headerContainer);
