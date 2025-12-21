@@ -202,6 +202,63 @@ class BackgroundService {
       };
     }
   }
+
+  /**
+   * Handles the ANALYZE_POST request.
+   * Calls the AI to determine the best reply style for the given post.
+   * Returns the raw analysis text (STYLE: ..., REASON: ...).
+   */
+  async handleAnalyzePost(data: { postText: string; stylesList: string; model?: string }): Promise<any> {
+    try {
+      let modelId = data.model;
+      if (!modelId) {
+        modelId = await StorageManager.getSelectedModel();
+      }
+      const provider = this.providers.get(modelId);
+
+      if (!provider) {
+        return { success: false, error: `不支持的 AI 模型: ${modelId}` };
+      }
+
+      const apiKey = await this.getApiKeyForModel(modelId);
+      if (!apiKey) {
+        return { success: false, error: `請先設定 ${provider.config.name} 的 API Key` };
+      }
+
+      // Analysis-only prompt
+      const analysisPrompt = `你是 Threads 社群專家。請閱讀以下貼文，並從「可用風格列表」中選擇 **最適合** 的一種回覆風格。
+
+【貼文內容】：
+${data.postText}
+
+【可用風格列表】：
+${data.stylesList}
+
+【輸出格式（嚴格遵守）】：
+STYLE: [風格名稱]
+REASON: [選擇此風格的簡短理由，10字以內]
+
+**只輸出上述兩行，不要輸出其他任何內容。**`;
+
+      console.log('🔍 Analysis Prompt Constructed');
+
+      const result = await provider.generateReply({
+        stylePrompt: analysisPrompt,
+        postText: "",
+        apiKey: apiKey
+      });
+
+      if (result.success) {
+        console.log('✅ 分析成功');
+        return { success: true, analysis: result.reply?.trim() || '' };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ 分析貼文時發生錯誤:', error);
+      return { success: false, error: '分析貼文時發生錯誤' };
+    }
+  }
 }
 
 const backgroundService = new BackgroundService();
@@ -226,6 +283,10 @@ browser.runtime.onMessage.addListener((request: any, _sender, _sendResponse) => 
   if (request.type === 'OPEN_OPTIONS') {
     browser.runtime.openOptionsPage();
     return Promise.resolve();
+  }
+
+  if (request.type === 'ANALYZE_POST') {
+    return backgroundService.handleAnalyzePost(request.data);
   }
 
   return undefined;

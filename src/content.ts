@@ -1191,33 +1191,62 @@ class ThreadsAIAssistant {
     smartBtn.style.color = 'white';
     smartBtn.title = 'AI 自動分析情境並選擇適合語氣';
 
-    smartBtn.onclick = (e) => {
+    smartBtn.onclick = async (e) => {
       e.stopPropagation();
+      this.hideExistingSelectors();
 
-      // Build list of available styles
+      // --- Step 1: Analyze ---
+      this.showLoadingState('🧠 AI 正在分析情境...');
+
+      const postTextElement = post.querySelector('[class*="html-div"][dir="auto"]');
+      const postText = postTextElement?.textContent?.trim() || '';
+
       const stylesList = REPLY_STYLES
-        .map(s => `- 風格名稱: ${s.name} (${s.description || '無描述'})`)
+        .map(s => `- ${s.name}: ${s.description || ''}`)
         .join('\n');
 
-      const autoStyle = {
-        id: 'auto',
-        name: '智能搭配',
-        description: 'AI 自動從現有風格中選擇最佳回應',
-        prompt: `你是 Threads 社交專家。請仔細閱讀貼文與上下文，分析其情緒與意圖。
-接著，請從以下「可用風格列表」中，挑選 **最適合** 且 **最能引起共鳴** 的一種風格來回覆：
+      let analysisResponse;
+      try {
+        analysisResponse = await browser.runtime.sendMessage({
+          type: 'ANALYZE_POST',
+          data: { postText, stylesList }
+        });
+      } catch (error) {
+        this.hideLoadingState();
+        this.showError('分析失敗，請稍後再試');
+        return;
+      }
 
-【可用風格列表】：
-${stylesList}
+      if (!analysisResponse || !analysisResponse.success) {
+        this.hideLoadingState();
+        this.showError(analysisResponse?.error || '分析失敗');
+        return;
+      }
 
-【任務規則】：
-1. 請嚴格遵守所選風格的語氣、用詞、Emoji 使用習慣。
-2. 請在回覆的 **最前兩行** 輸出分析結果，格式嚴格如下：
-STYLE: [風格名稱]
-REASON: [選擇此風格的簡短理由]
+      // Parse analysis response
+      const analysisText = analysisResponse.analysis || '';
+      const styleMatch = analysisText.match(/STYLE:\s*(.+)/i);
+      const reasonMatch = analysisText.match(/REASON:\s*(.+)/i);
 
-(第三行開始才是真正的回覆內容...)`
-      };
-      this.generateReply(post, autoStyle, true);
+      const styleName = styleMatch ? styleMatch[1].trim() : null;
+      const reasonText = reasonMatch ? reasonMatch[1].trim() : '情境適配';
+
+      // Find matching style from REPLY_STYLES
+      let matchedStyle = REPLY_STYLES.find(s => s.name === styleName);
+      if (!matchedStyle) {
+        // Fallback: random style
+        matchedStyle = REPLY_STYLES[Math.floor(Math.random() * REPLY_STYLES.length)];
+      }
+
+      // --- Show Analysis Result ---
+      this.hideLoadingState();
+      this.showSuccessMessage(`✨ 風格：${matchedStyle.name}\n💬 理由：${reasonText}`);
+
+      // --- Step 2: Generate Reply ---
+      // Wait 1.5s for user to read the analysis
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      this.generateReply(post, matchedStyle, false); // Use the matched style, not 'auto'
     };
 
     headerContainer.appendChild(smartBtn);
