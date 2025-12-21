@@ -1112,7 +1112,30 @@ class ThreadsAIAssistant {
       max-height: 480px;
     `;
 
-    // --- Header Actions (Random, Emoji, Kaomoji) ---
+    // Detect Self-Post Early for UI
+    const isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]'); // Example selector
+
+    // --- Status Indicator (New) ---
+    const statusDiv = document.createElement('div');
+    statusDiv.style.cssText = `
+        font-size: 12px;
+        color: ${isSelfPost ? '#1877f2' : '#65676b'};
+        background: ${isSelfPost ? '#e7f3ff' : '#f0f2f5'};
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+    `;
+    statusDiv.innerHTML = isSelfPost
+      ? '<span>👤 樓主模式 (My Post)</span>'
+      : '<span>💬 一般回覆 (Reply)</span>';
+
+    selector.appendChild(statusDiv);
+
+    // --- Header Actions (Random, Kaomoji) ---
     const headerContainer = document.createElement('div');
     headerContainer.style.cssText = `
       display: flex;
@@ -1180,27 +1203,7 @@ class ThreadsAIAssistant {
     headerContainer.appendChild(togglesGroup);
     selector.appendChild(headerContainer);
 
-    // Self Post Indicator (If detectable)
-    // Simple detection: Check if 'Edit' button exists? Or analyze URL?
-    // This is hard to robustly check here without complex DOM traversing, 
-    // but we can try looking for nearby 'View Insights' which only author sees.
-    const isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]'); // Example selector
-
-    if (isSelfPost) {
-      const selfBadge = document.createElement('div');
-      selfBadge.textContent = '👤 樓主模式';
-      selfBadge.style.cssText = `
-             background: #e7f3ff;
-             color: #1877f2;
-             font-size: 11px;
-             padding: 2px 6px;
-             border-radius: 4px;
-             margin-bottom: 8px;
-             display: inline-block;
-             font-weight: 500;
-        `;
-      selector.insertBefore(selfBadge, headerContainer.nextSibling); // Insert after header
-    }
+    // Old isSelfPost logic removed
 
     // Pass isSelfPost to class state or generateReply directly?
     // We'll calculate it fresh in generateReply or pass it down via closure.

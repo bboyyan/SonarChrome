@@ -22,7 +22,7 @@ export const PromptBuilder = {
             : "一位隨性、真誠的脆友 (Threads User)";
 
         if (options.isSelfPost) {
-            persona += " You are the ORIGINAL AUTHOR of this post replying to a comment. Be appreciative, welcoming, or clarifying.";
+            persona += " You are the ORIGINAL AUTHOR of this post replying to a comment.";
         }
 
         // 3. Emoji & Kaomoji Rules
