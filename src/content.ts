@@ -1211,13 +1211,10 @@ ${stylesList}
 
 【任務規則】：
 1. 請嚴格遵守所選風格的語氣、用詞、Emoji 使用習慣。
-2. 請在回覆的 **第一行** 輸出分析結果（此部分不會顯示給用戶，僅供系統讀取），格式如下：
-<st_analysis>
-Style: [你選擇的風格名稱]
-Reason: [簡短說明選擇此風格的原因]
-</st_analysis>
+2. 請在回覆的 **最開頭**，用雙大括號標記分析結果（系統會自動讀取並隱藏）：
+{{Style: [風格名稱]}}
+{{Reason: [選擇此風格的簡短理由]}}
 
-⚠️ 重要：**絕對不要** 使用 Markdown code block (\`\`\`) 包裹上述 XML 標籤，請直接輸出纯文字。
 (接著這裡才是真正的回覆內容...)`
       };
       this.generateReply(post, autoStyle, true);
@@ -1716,28 +1713,37 @@ Reason: [簡短說明選擇此風格的原因]
 
     // Style update for clearer analysis display
     const contentHtml = analysisInfo
-      ? `<div style="font-weight:600; margin-bottom:6px; font-size:15px;">✅ 智能搭配完成</div>
-           <div style="font-size:13px; line-height:1.4; white-space: pre-wrap; padding-top:4px; border-top:1px solid rgba(255,255,255,0.3);">${analysisInfo}</div>`
-      : '✅ 回覆已生成！';
+      ? `<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+           <span style="font-size:16px;">✨</span>
+           <span style="font-weight:600; font-size:13px; color:#4ade80;">AI 智能搭配完成</span>
+         </div>
+         <div style="font-size:13px; line-height:1.5; color:#e4e6eb; white-space: pre-wrap;">${analysisInfo}</div>`
+      : `<div style="display:flex; align-items:center; gap:8px;">
+           <span style="color:#4ade80;">✅</span>
+           <span>回覆已生成</span>
+         </div>`;
 
     message.style.cssText = `
       position: fixed;
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
-      background: ${analysisInfo ? 'linear-gradient(135deg, #42a645 0%, #2ea043 100%)' : '#42a645'};
+      background: #242526;
+      border: 1px solid #3e4042;
       color: white;
-      padding: ${analysisInfo ? '16px 20px' : '12px 16px'};
+      padding: 12px 16px;
       border-radius: 12px;
       font-size: 14px;
       z-index: 10001;
-      animation: fadeIn 0.3s ease;
+      animation: slideUpFade 0.3s ease;
       max-width: 90vw;
       width: max-content;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
       display: flex;
       flex-direction: column;
       align-items: flex-start;
+      backdrop-filter: blur(8px);
     `;
     message.innerHTML = contentHtml;
 
