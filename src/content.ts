@@ -1547,11 +1547,10 @@ class ThreadsAIAssistant {
           postText: finalPostText,
           style: style,
           strategy: strategy,
-          tone: this.getSelectedTone(),
-          model: await StorageManager.getSelectedModel(),
+          tone: this.selectedTone,
           options: {
             useKaomoji: this.useKaomoji,
-            isSelfPost: this.isHost
+            isSelfPost: this.isHostMode
           }
         }
       });
