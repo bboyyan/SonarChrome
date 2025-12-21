@@ -1336,15 +1336,14 @@ class ThreadsAIAssistant {
       return;
     }
 
-    let replyInput = this.findReplyInput(post);
+    let replyInput = await this.findReplyInput(post);
 
     // Auto-open Reply Modal if not found
     if (!replyInput) {
       const opened = await this.openReplyModal(post);
       if (opened) {
-        // Wait a moment for animation
-        await new Promise(resolve => setTimeout(resolve, 500));
-        replyInput = this.findReplyInput(post);
+        // Wait for animation and focus (handled inside findReplyInput mostly, but wait here too)
+        replyInput = await this.findReplyInput(post);
       }
     }
 
@@ -1425,22 +1424,50 @@ class ThreadsAIAssistant {
     return texts.join(' ').slice(0, 1000);
   }
 
-  private findReplyInput(post: Element): Element | null {
-    // 試著找附近的 textarea 或 contenteditable
-    let current = post.nextElementSibling;
+  private async findReplyInput(post: Element): Promise<Element | null> {
+    // Strategy 1: Active Focus (The most accurate)
+    // When we clicked 'Reply', the focus likely shifted to the new input.
+    // We check this first.
     let attempts = 0;
-
-    // 向下尋找
-    while (current && attempts < 5) {
-      const input = current.querySelector('textarea[placeholder*="回覆"], textarea[placeholder*="reply"], [contenteditable="true"]');
-      if (input) return input;
-
-      current = current.nextElementSibling;
+    while (attempts < 5) {
+      const active = document.activeElement;
+      if (active && (
+        (active.tagName === 'TEXTAREA' && (active as HTMLElement).getAttribute('placeholder')?.includes('回覆')) ||
+        active.getAttribute('contenteditable') === 'true'
+      )) {
+        // Verify this active element is seemingly related (optional, but good for safety)
+        // For now, assume focus behavior is reliable as user interaction drives it.
+        return active;
+      }
+      await new Promise(r => setTimeout(r, 100)); // Wait for focus shift
       attempts++;
     }
 
-    // 全局尋找（當彈出 modal 時）
-    return document.querySelector('textarea[placeholder*="回覆"], textarea[placeholder*="reply"], [contenteditable="true"]');
+    // Strategy 2: Scoped Search (Parent/Sibling Context)
+    // Go up to the container of the post to find the discussion block
+    const pressableContainer = post.closest('div[data-pressable-container="true"]');
+    if (pressableContainer) {
+      // Try finding input inside this container (comments sometimes expand inline)
+      let internalInput = pressableContainer.querySelector('div[contenteditable="true"], textarea');
+      if (internalInput) return internalInput;
+
+      // Try next sibling (often the reply block is inserted after the post block)
+      let sibling = pressableContainer.nextElementSibling;
+      if (sibling) {
+        let siblingInput = sibling.querySelector('div[contenteditable="true"], textarea');
+        if (siblingInput) return siblingInput;
+      }
+    }
+
+    // Strategy 3: Modal Fallback (Strict)
+    // Only if we detect we are likely in a modal overlay context
+    const modal = document.querySelector('div[role="dialog"][aria-modal="true"]');
+    if (modal) {
+      // If a modal is open, search strictly INSIDE the modal
+      return modal.querySelector('div[contenteditable="true"], textarea');
+    }
+
+    return null;
   }
 
   private showLoadingState() {
