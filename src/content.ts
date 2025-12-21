@@ -1626,10 +1626,16 @@ class ThreadsAIAssistant {
   // Duplicate removed
 
   private hideLoadingState() {
-    const loading = document.getElementById('threads-ai-loading');
-    if (loading) {
-      loading.remove();
+    const toast = document.getElementById('threads-ai-toast');
+    if (toast) {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (toast) toast.remove();
+      }, 300);
     }
+    // Cleanup old ID just in case
+    const oldLoading = document.getElementById('threads-ai-loading');
+    if (oldLoading) oldLoading.remove();
   }
 
   private fillReplyInput(input: HTMLInputElement | HTMLTextAreaElement, text: string) {
