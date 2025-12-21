@@ -783,7 +783,10 @@ class ThreadsHelper {
 class ThreadsAIAssistant {
   private observer: MutationObserver | null = null;
   private isInjected = false;
-  private selectedTone: BrandTone | null = null; // Default to null (no specific tone)
+  private selectedTone: BrandTone | null = null;
+  private useEmoji: boolean = true;
+  private useKaomoji: boolean = false;
+  private localStorageKey = 'threads-ai-settings';
 
   constructor() {
     this.init();
@@ -794,9 +797,34 @@ class ThreadsAIAssistant {
     if (this.isInjected) return;
     this.isInjected = true;
 
+    this.loadSettings(); // Load cached settings (Emoji/Kaomoji)
     this.injectButtons();
     this.startObserver();
     this.setupMessageListener();
+  }
+
+  private loadSettings() {
+    try {
+      const stored = localStorage.getItem(this.localStorageKey);
+      if (stored) {
+        const settings = JSON.parse(stored);
+        this.useEmoji = settings.useEmoji ?? true;
+        this.useKaomoji = settings.useKaomoji ?? false;
+      }
+    } catch (e) {
+      console.error('Failed to load local settings', e);
+    }
+  }
+
+  private saveSettings() {
+    try {
+      localStorage.setItem(this.localStorageKey, JSON.stringify({
+        useEmoji: this.useEmoji,
+        useKaomoji: this.useKaomoji
+      }));
+    } catch (e) {
+      console.error('Failed to save settings', e);
+    }
   }
 
   private injectButtons() {
@@ -1079,9 +1107,107 @@ class ThreadsAIAssistant {
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       padding: 12px;
-      min-width: 320px;
+      min-width: 340px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow-y: auto;
+      max-height: 480px;
     `;
+
+    // --- Header Actions (Random, Emoji, Kaomoji) ---
+    const headerContainer = document.createElement('div');
+    headerContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 8px;
+    `;
+
+    // Random Button
+    const randomBtn = document.createElement('button');
+    randomBtn.innerHTML = '🎲 隨機風格';
+    randomBtn.style.cssText = `
+      background: #f0f2f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #1c1e21;
+      font-weight: 600;
+      white-space: nowrap;
+    `;
+    randomBtn.onclick = () => {
+      const randomStyle = REPLY_STYLES[Math.floor(Math.random() * REPLY_STYLES.length)];
+      this.generateReply(post, randomStyle);
+      selector.remove();
+    };
+
+    // Toggles Container
+    const togglesGroup = document.createElement('div');
+    togglesGroup.style.display = 'flex';
+    togglesGroup.style.gap = '8px';
+
+    // Helper to create toggles
+    const createToggle = (label: string, initialState: boolean, onChange: (val: boolean) => void) => {
+      const labelEl = document.createElement('label');
+      labelEl.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            color: #65676b;
+        `;
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = initialState;
+      input.onchange = (e) => {
+        const checked = (e.target as HTMLInputElement).checked;
+        onChange(checked);
+        this.saveSettings(); // Save immediately
+      };
+      labelEl.appendChild(input);
+      labelEl.appendChild(document.createTextNode(label));
+      return labelEl;
+    };
+
+    togglesGroup.appendChild(createToggle('😊', this.useEmoji, (v) => this.useEmoji = v));
+    togglesGroup.appendChild(createToggle('(O_O)', this.useKaomoji, (v) => this.useKaomoji = v));
+
+    headerContainer.appendChild(randomBtn);
+    headerContainer.appendChild(togglesGroup);
+    selector.appendChild(headerContainer);
+
+    // Self Post Indicator (If detectable)
+    // Simple detection: Check if 'Edit' button exists? Or analyze URL?
+    // This is hard to robustly check here without complex DOM traversing, 
+    // but we can try looking for nearby 'View Insights' which only author sees.
+    const isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]'); // Example selector
+
+    if (isSelfPost) {
+      const selfBadge = document.createElement('div');
+      selfBadge.textContent = '👤 樓主模式';
+      selfBadge.style.cssText = `
+             background: #e7f3ff;
+             color: #1877f2;
+             font-size: 11px;
+             padding: 2px 6px;
+             border-radius: 4px;
+             margin-bottom: 8px;
+             display: inline-block;
+             font-weight: 500;
+        `;
+      selector.insertBefore(selfBadge, headerContainer.nextSibling); // Insert after header
+    }
+
+    // Pass isSelfPost to class state or generateReply directly?
+    // We'll calculate it fresh in generateReply or pass it down via closure.
+    // Let's store it on the selector dataset for easy access or re-calc in generateReply.
+    selector.dataset.isSelfPost = String(isSelfPost);
 
     // 1. Brand Tone Section
     const toneTitle = document.createElement('div');
@@ -1230,13 +1356,23 @@ class ThreadsAIAssistant {
     this.showLoadingState();
 
     try {
+      // Re-calculate isSelfPost here or pass from selector?
+      // Since generateReply is called from buttons too, prompt might need it.
+      // Let's check for Insights button again as it is robust for 'Self'.
+      const isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]');
+
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
         data: {
           postText,
           style: style.id,
-          prompt: style.prompt, // Keep for fallback or prompt-builder usage? Builder uses styleId.
-          tone: this.selectedTone // Pass full tone object
+          prompt: style.prompt,
+          tone: this.selectedTone,
+          options: {
+            useEmoji: this.useEmoji,
+            useKaomoji: this.useKaomoji,
+            isSelfPost: isSelfPost
+          }
         }
       });
 

@@ -7,17 +7,40 @@ export const PromptBuilder = {
     buildReplyPrompt(
         postContent: string,
         tone: BrandTone | null,
-        styleId: string
+        styleId: string,
+        options: {
+            useEmoji: boolean;
+            useKaomoji: boolean;
+            isSelfPost: boolean;
+        } = { useEmoji: true, useKaomoji: false, isSelfPost: false }
     ): string {
         // 1. 定義風格策略 (Style Strategy Definitions)
         const styleStrategy = this.getStyleStrategy(styleId);
 
         // 2. 定義語調人設 (Persona/Tone)
-        const persona = tone
+        let persona = tone
             ? `${tone.name} (${tone.description})`
             : "一位隨性、真誠的脆友 (Threads User)";
 
-        // 3. 組合 System Prompt
+        if (options.isSelfPost) {
+            persona += " You are the ORIGINAL AUTHOR of this post replying to a comment. Be appreciative, welcoming, or clarifying.";
+        }
+
+        // 3. Emoji & Kaomoji Rules
+        let visualRules = "";
+        if (options.useEmoji) {
+            visualRules += "- Feel free to use emojis (😂, 🔥, 🫠) naturally to express emotion.\n";
+        } else {
+            visualRules += "- STRICTLY NO EMOJIS (🚫). Use text only.\n";
+        }
+
+        if (options.useKaomoji) {
+            visualRules += "- Use Japanese kaomoji like (´・ω・`), (≧∇≦)/, (._.) naturally.\n";
+        } else {
+            visualRules += "- NO Japanese kaomoji.\n";
+        }
+
+        // 4. 組合 System Prompt
         return `You are a savvy, genuine Threads user in Taiwan. NOT an AI assistant.
 Your goal is to write replies that blend in perfectly with the "Threads vibe" (脆).
 
@@ -33,7 +56,10 @@ CRITICAL STYLE RULES (Must Follow):
    - Use particles like "吧", "呀", "笑死", "確實", "真的", "嗚嗚" naturally.
    - Use lowercase for English words if it feels more natural (e.g. "ui", "api").
 
-3. **Content Strategy**:
+3. **Visual Style**:
+   ${visualRules}
+
+4. **Content Strategy**:
    - Focus on **Emotional Resonance** (Vibing) over "Value Adding".
    - Don't try to "network" aggressively. Just hang out.
 
