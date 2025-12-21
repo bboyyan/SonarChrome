@@ -1163,7 +1163,8 @@ class ThreadsAIAssistant {
     `;
     randomBtn.onclick = () => {
       const randomStyle = REPLY_STYLES[Math.floor(Math.random() * REPLY_STYLES.length)];
-      this.generateReply(post, randomStyle);
+      // Pass 'true' to indicate this is a random selection, so we should show the style name
+      this.generateReply(post, randomStyle, true);
       selector.remove();
     };
 
@@ -1330,7 +1331,59 @@ class ThreadsAIAssistant {
     return option;
   }
 
-  private async generateReply(post: Element, style: ReplyStyle) {
+  private showLoadingState(message: string = 'AI 正在思考中...') {
+    let toast = document.getElementById('threads-ai-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'threads-ai-toast';
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1c1e21;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 99px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 10001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      `;
+      document.body.appendChild(toast);
+    }
+
+    toast.innerHTML = `<span class="spinner"></span> <span>${message}</span>`;
+    // Add spinner style if needed, or simple text
+    // Simple spinner in CSS
+    const style = document.createElement('style');
+    style.textContent = `
+      .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid white;
+        border-top: 2px solid transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    `;
+    if (!document.head.querySelector('#threads-ai-spinner-style')) {
+      style.id = 'threads-ai-spinner-style';
+      document.head.appendChild(style);
+    }
+
+    // Show
+    requestAnimationFrame(() => {
+      if (toast) toast.style.opacity = '1';
+    });
+  }
+
+  private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false) {
     const postText = this.extractPostText(post);
     if (!postText) {
       this.showError('無法讀取貼文內容');
@@ -1353,7 +1406,10 @@ class ThreadsAIAssistant {
       return;
     }
 
-    this.showLoadingState();
+    const loadingMessage = showStyleName
+      ? `正在使用「${style.name}」風格生成...`
+      : 'AI 正在思考中...';
+    this.showLoadingState(loadingMessage);
 
     try {
       // Re-calculate isSelfPost here or pass from selector?
@@ -1470,24 +1526,7 @@ class ThreadsAIAssistant {
     return null;
   }
 
-  private showLoadingState() {
-    const loadingIndicator = document.createElement('div');
-    loadingIndicator.id = 'threads-ai-loading';
-    loadingIndicator.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 10001;
-    `;
-    loadingIndicator.textContent = '🤖 AI 正在生成回覆...';
-    document.body.appendChild(loadingIndicator);
-  }
+  // Duplicate removed
 
   private hideLoadingState() {
     const loading = document.getElementById('threads-ai-loading');
