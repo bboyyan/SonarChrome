@@ -1211,11 +1211,11 @@ ${stylesList}
 
 【任務規則】：
 1. 請嚴格遵守所選風格的語氣、用詞、Emoji 使用習慣。
-2. 請在回覆的 **最開頭**，用雙大括號標記分析結果（系統會自動讀取並隱藏）：
-{{Style: [風格名稱]}}
-{{Reason: [選擇此風格的簡短理由]}}
+2. 請在回覆的 **最前兩行** 輸出分析結果，格式嚴格如下：
+STYLE: [風格名稱]
+REASON: [選擇此風格的簡短理由]
 
-(接著這裡才是真正的回覆內容...)`
+(第三行開始才是真正的回覆內容...)`
       };
       this.generateReply(post, autoStyle, true);
     };
@@ -1530,31 +1530,39 @@ ${stylesList}
         let finalReply = response.reply;
         let analysisInfo: string | undefined = undefined;
 
-        // 1. Try to extract XML block (Handling potential markdown code blocks wrapping it)
-        const analysisRegex = /<st_analysis>([\s\S]*?)<\/st_analysis>/i;
-        const analysisMatch = finalReply.match(analysisRegex);
+        // 1. Line-Based Parsing (Stronger than XML for LLMs)
+        const styleMatch = finalReply.match(/STYLE:\s*(.+)$/im);
+        const reasonMatch = finalReply.match(/REASON:\s*(.+)$/im);
 
-        if (analysisMatch) {
-          const content = analysisMatch[1].trim();
-          // Remove the tag from the reply to be pasted
-          finalReply = finalReply.replace(analysisMatch[0], '').trim();
+        if (styleMatch || reasonMatch) {
+          // Remove the specific lines from the reply so they don't appear in the textbox
+          if (styleMatch) finalReply = finalReply.replace(styleMatch[0], '');
+          if (reasonMatch) finalReply = finalReply.replace(reasonMatch[0], '');
 
-          // Clean up potential markdown marks leftover
-          finalReply = finalReply.replace(/^```html\s*/, '').replace(/^```xml\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+          finalReply = finalReply.trim();
+          // Clean up potentially leftover markdown code blocks
+          finalReply = finalReply.replace(/^```\w*\s*/, '').replace(/\s*```$/, '');
 
-          const styleMatch = content.match(/Style:\s*([^\n]*)/i);
-          const reasonMatch = content.match(/Reason:\s*([^\n]*)/i);
+          const styleName = styleMatch ? styleMatch[1].trim() : '智能推薦';
+          const reasonText = reasonMatch ? reasonMatch[1].trim() : '根據上下文自動選擇';
 
-          const styleName = styleMatch ? styleMatch[1].trim() : '自動選擇';
-          const reasonText = reasonMatch ? reasonMatch[1].trim() : '無額外說明';
-
-          analysisInfo = `👉 已選風格：${styleName}\n💡 理由：${reasonText}`;
+          analysisInfo = `✨ 風格：${styleName}\n💬 理由：${reasonText}`;
         } else if (style.id === 'auto') {
-          // Fallback for Smart Mode
-          analysisInfo = `👉 已選風格：智能搭配 (自動)\n💡 理由：AI 自動分析情境`;
+          // Fallback for Smart Mode if parsing completely failed
+          analysisInfo = `✨ 風格：智能搭配 (自動)\n💬 理由：AI 自動分析情境`;
         }
 
-        this.fillReplyInput(replyInput as HTMLInputElement, finalReply, analysisInfo);
+        // UX Improvement: Show Analysis Toast FIRST, then fill text
+        if (analysisInfo && style.id === 'auto') {
+          this.showSuccessMessage(analysisInfo);
+          // Delay filling the input to simulate "Analyze -> Generate" flow
+          setTimeout(() => {
+            this.fillReplyInput(replyInput as HTMLInputElement, finalReply, undefined); // Pass undefined to avoid showing toast 2nd time
+          }, 1500);
+        } else {
+          // Normal flow for manually selected styles
+          this.fillReplyInput(replyInput as HTMLInputElement, finalReply, analysisInfo);
+        }
       } else {
         if (response && response.error && (response.error.includes('Key') || response.error === 'NO_API_KEY')) {
           this.showApiKeyPrompt();
