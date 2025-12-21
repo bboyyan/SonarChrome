@@ -785,6 +785,7 @@ class ThreadsAIAssistant {
   private isInjected = false;
   private selectedTone: BrandTone | null = null;
   private useKaomoji: boolean = false;
+  private currentUsername: string | null = null; // Store logged-in username
   private localStorageKey = 'threads-ai-settings';
 
   constructor() {
@@ -796,7 +797,8 @@ class ThreadsAIAssistant {
     if (this.isInjected) return;
     this.isInjected = true;
 
-    this.loadSettings(); // Load cached settings (Emoji/Kaomoji)
+    this.loadSettings(); // Load cached settings
+    this.detectCurrentUsername(); // Try to get username on load
     this.injectButtons();
     this.startObserver();
     this.setupMessageListener();
@@ -807,7 +809,7 @@ class ThreadsAIAssistant {
       const stored = localStorage.getItem(this.localStorageKey);
       if (stored) {
         const settings = JSON.parse(stored);
-        this.useEmoji = settings.useEmoji ?? true;
+        // this.useEmoji removed
         this.useKaomoji = settings.useKaomoji ?? false;
       }
     } catch (e) {
@@ -818,7 +820,7 @@ class ThreadsAIAssistant {
   private saveSettings() {
     try {
       localStorage.setItem(this.localStorageKey, JSON.stringify({
-        useEmoji: this.useEmoji,
+        // useEmoji removed
         useKaomoji: this.useKaomoji
       }));
     } catch (e) {
@@ -1112,8 +1114,17 @@ class ThreadsAIAssistant {
       max-height: 480px;
     `;
 
-    // Detect Self-Post Early for UI
-    const isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]'); // Example selector
+    // Detect Self-Post Early for UI using Username Match
+    const postAuthor = this.getPostAuthor(post);
+    let isSelfPost = false;
+
+    // Primary: Username Match
+    if (this.currentUsername && postAuthor) {
+      isSelfPost = this.currentUsername === postAuthor;
+    } else {
+      // Fallback: Insights Icon
+      isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]');
+    }
 
     // --- Status Indicator (New) ---
     const statusDiv = document.createElement('div');
@@ -1412,10 +1423,14 @@ class ThreadsAIAssistant {
     this.showLoadingState(loadingMessage);
 
     try {
-      // Re-calculate isSelfPost here or pass from selector?
-      // Since generateReply is called from buttons too, prompt might need it.
-      // Let's check for Insights button again as it is robust for 'Self'.
-      const isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]');
+      // Re-calculate isSelfPost here
+      const postAuthor = this.getPostAuthor(post);
+      let isSelfPost = false;
+      if (this.currentUsername && postAuthor) {
+        isSelfPost = this.currentUsername === postAuthor;
+      } else {
+        isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]');
+      }
 
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
@@ -1688,6 +1703,50 @@ class ThreadsAIAssistant {
         this.showError(message.data);
       }
     });
+  }
+
+  private detectCurrentUsername() {
+    // 1. Try to find the Profile link in the globally available Navigation Bar
+    // Threads usually has a bottom bar (mobile) or side bar (desktop) with a "Profile" icon.
+    // The link is always '/@username'.
+
+    // Desktop/General Strategy: Look for the link with aria-label="Profile" or similar
+    const profileLink = document.querySelector('a[href^="/@"][role="link"][aria-label="Profile"], a[href^="/@"][role="link"][aria-label="個人檔案"]');
+
+    if (profileLink) {
+      const href = profileLink.getAttribute('href');
+      if (href) {
+        // href is "/@username"
+        this.currentUsername = href.replace('/@', '').replace(/\/$/, '');
+        console.log('👤 Detected Current User:', this.currentUsername);
+        return;
+      }
+    }
+
+    // Fallback: iterate over all nav links and find the one that looks like a profile (often has a user avatar image inside)
+    // Wait for DOM to be fully ready if not found immediately
+    if (!this.currentUsername) {
+      setTimeout(() => {
+        const retryLink = document.querySelector('a[href^="/@"][role="link"][aria-label="Profile"], a[href^="/@"][role="link"][aria-label="個人檔案"]');
+        if (retryLink) {
+          const href = retryLink.getAttribute('href');
+          if (href) this.currentUsername = href.replace('/@', '').replace(/\/$/, '');
+        }
+      }, 3000);
+    }
+  }
+
+  // Helper to extract author from specific post
+  private getPostAuthor(post: Element): string | null {
+    // The author link is usually at the top of the post.
+    // It typically has style "font-weight: 600" or is the first link with /@username
+    // To be safer, we look for the link that is inside the header part (usually first flex row)
+    // A simple heuristic: The first link starting with /@ inside the post container is 99% the author.
+    const authorLink = post.querySelector('a[href^="/@"][role="link"]');
+    if (authorLink) {
+      return authorLink.getAttribute('href')?.replace('/@', '').replace(/\/$/, '') || null;
+    }
+    return null;
   }
 }
 
