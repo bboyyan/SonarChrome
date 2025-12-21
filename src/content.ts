@@ -1507,7 +1507,7 @@ class ThreadsAIAssistant {
     return finalPostText;
   }
 
-  private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false) {
+  private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false, strategy: string = '') {
     const finalPostText = this.extractFullContext(post);
     if (!finalPostText) {
       this.showError('無法讀取貼文內容');
@@ -1521,7 +1521,7 @@ class ThreadsAIAssistant {
     if (!replyInput) {
       const opened = await this.openReplyModal(post);
       if (opened) {
-        // Wait for animation and focus (handled inside findReplyInput mostly, but wait here too)
+        // Wait for animation and focus
         replyInput = await this.findReplyInput(post);
       }
     }
@@ -1535,9 +1535,8 @@ class ThreadsAIAssistant {
       ? `正在使用「${style.name}」風格生成...`
       : 'AI 正在思考中...';
 
-    // Pass captured context snippet if available (Clean newlines for display)
-    const contextSnippet = contextText ? contextText.replace(/\s+/g, ' ').substring(0, 20) : null;
-    this.showLoadingState(loadingMessage, contextSnippet);
+    // No contextSnippet available here easily, so passing null is safer to avoid ReferenceError
+    this.showLoadingState(loadingMessage, null);
 
     try {
       this.showLoadingState('✨ AI 正在生成回覆...');
@@ -1547,7 +1546,7 @@ class ThreadsAIAssistant {
         data: {
           postText: finalPostText,
           style: style,
-          strategy: strategy, // New field
+          strategy: strategy,
           tone: this.getSelectedTone(),
           model: await StorageManager.getSelectedModel(),
           options: {
