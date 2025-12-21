@@ -785,7 +785,7 @@ class ThreadsAIAssistant {
   private isInjected = false;
   private selectedTone: BrandTone | null = null;
   private useKaomoji: boolean = false;
-  private currentUsername: string | null = null; // Store logged-in username
+  private isHostMode: boolean = false; // Manual toggle for "Host Mode"
   private localStorageKey = 'threads-ai-settings';
 
   constructor() {
@@ -798,7 +798,6 @@ class ThreadsAIAssistant {
     this.isInjected = true;
 
     this.loadSettings(); // Load cached settings
-    this.detectCurrentUsername(); // Try to get username on load
     this.injectButtons();
     this.startObserver();
     this.setupMessageListener();
@@ -1114,37 +1113,7 @@ class ThreadsAIAssistant {
       max-height: 480px;
     `;
 
-    // Detect Self-Post Early for UI using Username Match
-    const postAuthor = this.getPostAuthor(post);
-    let isSelfPost = false;
 
-    // Primary: Username Match
-    if (this.currentUsername && postAuthor) {
-      isSelfPost = this.currentUsername === postAuthor;
-    } else {
-      // Fallback: Insights Icon
-      isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]');
-    }
-
-    // --- Status Indicator (New) ---
-    const statusDiv = document.createElement('div');
-    statusDiv.style.cssText = `
-        font-size: 12px;
-        color: ${isSelfPost ? '#1877f2' : '#65676b'};
-        background: ${isSelfPost ? '#e7f3ff' : '#f0f2f5'};
-        padding: 4px 8px;
-        border-radius: 4px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-weight: 500;
-    `;
-    statusDiv.innerHTML = isSelfPost
-      ? '<span>👤 樓主模式 (My Post)</span>'
-      : '<span>💬 一般回覆 (Reply)</span>';
-
-    selector.appendChild(statusDiv);
 
     // --- Header Actions (Random, Kaomoji) ---
     const headerContainer = document.createElement('div');
@@ -1210,17 +1179,12 @@ class ThreadsAIAssistant {
     };
 
     togglesGroup.appendChild(createToggle('(O_O)', this.useKaomoji, (v) => this.useKaomoji = v));
+    // Host Mode Toggle
+    togglesGroup.appendChild(createToggle('我是樓主', this.isHostMode, (v) => this.isHostMode = v));
 
     headerContainer.appendChild(randomBtn);
     headerContainer.appendChild(togglesGroup);
     selector.appendChild(headerContainer);
-
-    // Old isSelfPost logic removed
-
-    // Pass isSelfPost to class state or generateReply directly?
-    // We'll calculate it fresh in generateReply or pass it down via closure.
-    // Let's store it on the selector dataset for easy access or re-calc in generateReply.
-    selector.dataset.isSelfPost = String(isSelfPost);
 
     // 1. Brand Tone Section
     const toneTitle = document.createElement('div');
@@ -1506,14 +1470,8 @@ class ThreadsAIAssistant {
     this.showLoadingState(loadingMessage, contextSnippet);
 
     try {
-      // Re-calculate isSelfPost here
-      const postAuthor = this.getPostAuthor(post);
-      let isSelfPost = false;
-      if (this.currentUsername && postAuthor) {
-        isSelfPost = this.currentUsername === postAuthor;
-      } else {
-        isSelfPost = !!post.querySelector('svg[aria-label="View insights"], svg[aria-label="查看洞察報告"]');
-      }
+      // Use Manual Host Mode Toggle
+      const isSelfPost = this.isHostMode;
 
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
@@ -1816,36 +1774,7 @@ class ThreadsAIAssistant {
     });
   }
 
-  private detectCurrentUsername() {
-    // 1. Try to find the Profile link in the globally available Navigation Bar
-    // Threads usually has a bottom bar (mobile) or side bar (desktop) with a "Profile" icon.
-    // The link is always '/@username'.
 
-    // Desktop/General Strategy: Look for the link with aria-label="Profile" or similar
-    const profileLink = document.querySelector('a[href^="/@"][role="link"][aria-label="Profile"], a[href^="/@"][role="link"][aria-label="個人檔案"]');
-
-    if (profileLink) {
-      const href = profileLink.getAttribute('href');
-      if (href) {
-        // href is "/@username"
-        this.currentUsername = href.replace('/@', '').replace(/\/$/, '');
-        console.log('👤 Detected Current User:', this.currentUsername);
-        return;
-      }
-    }
-
-    // Fallback: iterate over all nav links and find the one that looks like a profile (often has a user avatar image inside)
-    // Wait for DOM to be fully ready if not found immediately
-    if (!this.currentUsername) {
-      setTimeout(() => {
-        const retryLink = document.querySelector('a[href^="/@"][role="link"][aria-label="Profile"], a[href^="/@"][role="link"][aria-label="個人檔案"]');
-        if (retryLink) {
-          const href = retryLink.getAttribute('href');
-          if (href) this.currentUsername = href.replace('/@', '').replace(/\/$/, '');
-        }
-      }, 3000);
-    }
-  }
 
   // Helper to extract author from specific post
   private getPostAuthor(post: Element): string | null {
