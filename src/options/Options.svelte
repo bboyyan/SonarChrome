@@ -546,9 +546,9 @@
         return modifiedDefaultStyles.some((s) => s.id === styleId);
     }
 
-    $: isStyleHidden = (styleId: string) => {
+    function isStyleHidden(styleId: string): boolean {
         return hiddenStyles.includes(styleId);
-    };
+    }
 
     async function toggleStyleVisibility(styleId: string) {
         const wasHidden = hiddenStyles.includes(styleId);
@@ -793,9 +793,9 @@
         return modifiedDefaultBrandTones.some((s) => s.id === brandToneId);
     }
 
-    $: isBrandToneHidden = (brandToneId: string) => {
+    function isBrandToneHidden(brandToneId: string): boolean {
         return hiddenBrandTones.includes(brandToneId);
-    };
+    }
 
     async function toggleBrandToneVisibility(brandToneId: string) {
         const wasHidden = hiddenBrandTones.includes(brandToneId);
