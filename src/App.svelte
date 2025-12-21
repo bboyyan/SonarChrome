@@ -19,7 +19,15 @@
   <!-- Actions -->
   <section class="card">
     <button
-      on:click={() => browser.runtime.openOptionsPage()}
+      on:click={async () => {
+        try {
+          await browser.runtime.openOptionsPage();
+        } catch (e) {
+          console.error("Failed to open options page:", e);
+          const optionsUrl = browser.runtime.getURL("src/options/options.html");
+          await browser.tabs.create({ url: optionsUrl });
+        }
+      }}
       class="btn btn-primary"
     >
       ⚙️ 開啟設定 (Open Settings)
