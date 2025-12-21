@@ -1198,8 +1198,12 @@ class ThreadsAIAssistant {
       // --- Step 1: Analyze ---
       this.showLoadingState('🧠 AI 正在分析情境...');
 
-      const postTextElement = post.querySelector('[class*="html-div"][dir="auto"]');
-      const postText = postTextElement?.textContent?.trim() || '';
+      const postText = this.extractPostText(post);
+      if (!postText) {
+        this.hideLoadingState();
+        this.showError('無法讀取貼文內容');
+        return;
+      }
 
       const stylesList = REPLY_STYLES
         .map(s => `- ${s.name}: ${s.description || ''}`)
@@ -1792,14 +1796,16 @@ class ThreadsAIAssistant {
     const message = document.createElement('div');
     message.style.cssText = `
       position: fixed;
-      top: 20px;
-      right: 20px;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
       background: #e74c3c;
       color: white;
       padding: 12px 16px;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 14px;
       z-index: 10001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     `;
     message.textContent = `❌ ${errorMessage}`;
 
