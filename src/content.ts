@@ -1395,11 +1395,74 @@ class ThreadsAIAssistant {
   }
 
   private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false) {
-    const postText = this.extractPostText(post);
-    if (!postText) {
+    // 1. Extract Target Text (The comment user clicked Reply on)
+    let targetText = this.extractPostText(post);
+    if (!targetText) {
       this.showError('無法讀取貼文內容');
       return;
     }
+
+    // 2. Try to find "Root Context" (The main post this comment belongs to)
+    let contextText = '';
+    try {
+      let rootPost: Element | null = null;
+
+      // Strategy A: Detail View (URL contains /post/ or /t/)
+      // In detail view, the first post in the main container is ALWAYS the root.
+      if (location.pathname.includes('/post/') || location.pathname.includes('/t/')) {
+        // Locate the first pressable container in the main scroll area
+        // We can just query `[data-pressable-container="true"]` globally because the first one in DOM layout 
+        // inside the main feed area is the root.
+        // Adjust: Be precise to avoid picking up nav items. Scoped to `main` role if possible.
+        const mainRole = document.querySelector('main');
+        if (mainRole) {
+          rootPost = mainRole.querySelector('[data-pressable-container="true"]');
+        }
+      }
+
+      // Strategy B: Feed View (Sibling Grouping)
+      // If we didn't find it (or not in detail view), look for the "First Sibling" in the current cluster.
+      if (!rootPost) {
+        // In Feed, a thread cluster is usually wrapped in a div.
+        // We go up 1-2 levels to find the cluster wrapper.
+        // Heuristic: The cluster wrapper usually contains multiple `data-pressable-container`.
+        const parent = post.parentElement;
+        if (parent) {
+          const siblings = parent.querySelectorAll('[data-pressable-container="true"]');
+          if (siblings.length > 0) {
+            rootPost = siblings[0];
+          }
+        }
+        // Try one level higher if needed? (Usually direct parent is enough for the recursive structure)
+        if (!rootPost && post.parentElement?.parentElement) {
+          const grandSiblings = post.parentElement.parentElement.querySelectorAll('[data-pressable-container="true"]');
+          if (grandSiblings.length > 0) {
+            rootPost = grandSiblings[0];
+          }
+        }
+      }
+
+      // If we found a root post, and it IS NOT the current post (meaning current post is a reply)
+      if (rootPost && rootPost !== post) {
+        const rootText = this.extractPostText(rootPost);
+        if (rootText && rootText !== targetText) {
+          contextText = rootText;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to extract context, proceeding with target only', e);
+    }
+
+    // 3. Construct Final Post Text for AI
+    let finalPostText = targetText;
+    if (contextText) {
+      // Structured format for PromptBuilder
+      finalPostText = `【主文 Context (The Main Topic)】:\n${contextText}\n\n【回覆對象 Target (The Specific Comment)】:\n${targetText}`;
+      console.log('🔗 Context Linked:', { context: contextText.substring(0, 20), target: targetText.substring(0, 20) });
+    } else {
+      console.log('🔗 No Context Linked (Replying to Root or Standalone)');
+    }
+
 
     let replyInput = await this.findReplyInput(post);
 
@@ -1435,7 +1498,7 @@ class ThreadsAIAssistant {
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
         data: {
-          postText,
+          postText: finalPostText,
           style: style.id,
           prompt: style.prompt,
           tone: this.selectedTone,
