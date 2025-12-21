@@ -105,7 +105,13 @@ class BackgroundService {
 
       if (result.success) {
         console.log('✅ 回覆生成成功，模型:', provider.config.name);
-        return { success: true, reply: result.reply };
+
+        // **Control Token Cleaning**
+        // Remove Grok/LLM internal control tokens like <|control633|>, <|endoftext|>, etc.
+        let rawReply = result.reply || '';
+        let cleanReply = rawReply.replace(/<\|.*?\|>/g, '').trim();
+
+        return { success: true, reply: cleanReply };
       } else {
         console.error('❌ 回覆生成失敗:', result.error);
         return {
