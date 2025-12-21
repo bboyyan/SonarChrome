@@ -1217,6 +1217,7 @@ Style: [你選擇的風格名稱]
 Reason: [簡短說明選擇此風格的原因]
 </st_analysis>
 
+⚠️ 重要：**絕對不要** 使用 Markdown code block (\`\`\`) 包裹上述 XML 標籤，請直接輸出纯文字。
 (接著這裡才是真正的回覆內容...)`
       };
       this.generateReply(post, autoStyle, true);
@@ -1230,23 +1231,23 @@ Reason: [簡短說明選擇此風格的原因]
     // 1. Brand Tone Section
     const toneTitle = document.createElement('div');
     toneTitle.style.cssText = `
-      font-weight: 600;
-      font-size: 13px;
+      font - weight: 600;
+      font - size: 13px;
       color: #65676b;
-      margin-bottom: 8px;
-    `;
+      margin - bottom: 8px;
+      `;
     toneTitle.textContent = '語調 (選填)';
     selector.appendChild(toneTitle);
 
     const toneContainer = document.createElement('div');
     toneContainer.style.cssText = `
       display: flex;
-      flex-wrap: wrap;
+      flex - wrap: wrap;
       gap: 6px;
-      margin-bottom: 16px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #f0f0f0;
-    `;
+      margin - bottom: 16px;
+      padding - bottom: 16px;
+      border - bottom: 1px solid #f0f0f0;
+      `;
 
     BRAND_TONES.forEach(tone => {
       const toneChip = document.createElement('div');
@@ -1254,14 +1255,14 @@ Reason: [簡短說明選擇此風格的原因]
       const isSelected = this.selectedTone?.id === tone.id;
 
       toneChip.style.cssText = `
-        padding: 4px 10px;
-        border-radius: 99px;
-        font-size: 12px;
-        cursor: pointer;
-        border: 1px solid ${isSelected ? '#1877f2' : '#ddd'};
-        background: ${isSelected ? '#1877f2' : 'white'};
-        color: ${isSelected ? 'white' : '#1c1e21'};
-        transition: all 0.2s;
+      padding: 4px 10px;
+      border - radius: 99px;
+      font - size: 12px;
+      cursor: pointer;
+      border: 1px solid ${isSelected ? '#1877f2' : '#ddd'};
+      background: ${isSelected ? '#1877f2' : 'white'};
+      color: ${isSelected ? 'white' : '#1c1e21'};
+      transition: all 0.2s;
       `;
 
       toneChip.addEventListener('click', (e) => {
@@ -1296,11 +1297,11 @@ Reason: [簡短說明選擇此風格的原因]
     // 2. Reply Style Section
     const styleTitle = document.createElement('div');
     styleTitle.style.cssText = `
-      font-weight: 600;
-      font-size: 13px;
+      font - weight: 600;
+      font - size: 13px;
       color: #65676b;
-      margin-bottom: 8px;
-    `;
+      margin - bottom: 8px;
+      `;
     styleTitle.textContent = '回覆風格 (點擊生成)';
     selector.appendChild(styleTitle);
 
@@ -1317,19 +1318,19 @@ Reason: [簡短說明選擇此風格的原因]
     option.style.cssText = `
       padding: 12px 16px;
       cursor: pointer;
-      border-radius: 8px;
+      border - radius: 8px;
       margin: 2px 0;
-      transition: background-color 0.2s ease;
-    `;
+      transition: background - color 0.2s ease;
+      `;
 
     option.innerHTML = `
-      <div style="font-weight: 500; font-size: 14px; color: #1c1e21; margin-bottom: 2px;">
-        ${style.name}
+        < div style = "font-weight: 500; font-size: 14px; color: #1c1e21; margin-bottom: 2px;" >
+          ${style.name}
       </div>
-      <div style="font-size: 12px; color: #65676b;">
-        ${style.description}
+        < div style = "font-size: 12px; color: #65676b;" >
+          ${style.description}
       </div>
-    `;
+        `;
 
     option.addEventListener('mouseenter', () => {
       option.style.backgroundColor = '#f2f3f5';
@@ -1355,28 +1356,28 @@ Reason: [簡短說明選擇此風格的原因]
     let toast = document.createElement('div');
     toast.id = 'threads-ai-toast';
     toast.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #1c1e21;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-        font-size: 14px;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-        z-index: 10001;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        max-width: 90vw;
+      position: fixed;
+      bottom: 24px;
+      left: 50 %;
+      transform: translateX(-50 %);
+      background: #1c1e21;
+      color: white;
+      padding: 12px 20px;
+      border - radius: 12px;
+      box - shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      font - size: 14px;
+      display: flex;
+      flex - direction: column;
+      align - items: flex - start;
+      gap: 6px;
+      z - index: 10001;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      max - width: 90vw;
       `;
     document.body.appendChild(toast);
 
-    let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span> <span style="font-weight: 500;">${message}</span></div>`;
+    let html = `< div style = "display:flex; align-items:center; gap:8px;" > <span class="spinner" > </span> <span style="font-weight: 500;">${message}</span > </div>`;
 
     if (contextSnippet) {
       // Truncate if too long (although caller should probably truncate)
@@ -1709,8 +1710,9 @@ Reason: [簡短說明選擇此風格的原因]
 
     message.style.cssText = `
       position: fixed;
-      top: 80px;
-      right: 20px;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
       background: ${analysisInfo ? 'linear-gradient(135deg, #42a645 0%, #2ea043 100%)' : '#42a645'};
       color: white;
       padding: ${analysisInfo ? '16px 20px' : '12px 16px'};
@@ -1718,8 +1720,12 @@ Reason: [簡短說明選擇此風格的原因]
       font-size: 14px;
       z-index: 10001;
       animation: fadeIn 0.3s ease;
-      max-width: 320px;
+      max-width: 90vw;
+      width: max-content;
       box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
     `;
     message.innerHTML = contentHtml;
 
