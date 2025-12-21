@@ -1388,23 +1388,23 @@ class ThreadsAIAssistant {
     toast.style.cssText = `
       position: fixed;
       bottom: 24px;
-      left: 50 %;
-      transform: translateX(-50 %);
+      left: 50%;
+      transform: translateX(-50%);
       background: #1c1e21;
       color: white;
       padding: 12px 20px;
-      border - radius: 12px;
-      box - shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      font - size: 14px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      font-size: 14px;
       display: flex;
-      flex - direction: column;
-      align - items: flex - start;
+      flex-direction: column;
+      align-items: flex-start;
       gap: 6px;
-      z - index: 10001;
+      z-index: 10001;
       opacity: 0;
       transition: opacity 0.3s ease;
-      max - width: 90vw;
-      `;
+      max-width: 90vw;
+    `;
     document.body.appendChild(toast);
 
     let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span><span style="font-weight: 500;">${message}</span></div>`;
