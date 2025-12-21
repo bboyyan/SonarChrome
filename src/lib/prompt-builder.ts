@@ -65,12 +65,19 @@ CONTEXT:
 - Your Persona: ${persona}
 - Target Style: ${styleStrategy.name} - ${styleStrategy.definition}
 
+CRITICAL OUTPUT RULES:
+- Output ONLY the reply text. Nothing else.
+- DO NOT output any instructions, explanations, or meta-commentary.
+- DO NOT mention word counts, strategies, or formatting rules in your output.
+- DO NOT output anything in parentheses like "(Under 50 words...)" or "(Final:...)".
+- Just write the reply as if you're typing it directly into Threads.
+
 TASK:
-Write a reply in the "${styleStrategy.name}" style.
-${options.strategy ? `\n🔥 MANDATORY STRATEGY: ${options.strategy}\n` : ''}
-Constraint: ${taskConstraint}
-Keep it VERY concise (under 50 words, ideally 1-2 sentences).
-Output only the reply text.`;
+Write a 1-2 sentence reply in the "${styleStrategy.name}" style.${options.strategy ? ` Strategy: ${options.strategy}.` : ''}
+${taskConstraint}
+
+---
+REPLY:`;
     },
 
     /**
