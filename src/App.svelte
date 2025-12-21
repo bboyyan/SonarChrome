@@ -31,7 +31,7 @@
 
   <!-- Links -->
   <div class="links">
-    <a href="https://www.threads.net/@ray.realms" target="_blank" class="link">
+    <a href="https://www.threads.net/@choyeh5" target="_blank" class="link">
       🧵 追蹤開發者
     </a>
   </div>
