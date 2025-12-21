@@ -1210,8 +1210,14 @@ class ThreadsAIAssistant {
 ${stylesList}
 
 【任務規則】：
-1. 請 "Roleplay" 扮演你所選的那種風格，嚴格遵守該風格的語氣、用詞、Emoji 使用習慣。
-2. 直接輸出回覆內容即可，**不要** 輸出你選了哪個風格，也 **不要** 加任何解釋。`
+1. 請嚴格遵守所選風格的語氣、用詞、Emoji 使用習慣。
+2. 請在回覆的 **第一行** 輸出分析結果（此部分不會顯示給用戶，僅供系統讀取），格式如下：
+<st_analysis>
+Style: [你選擇的風格名稱]
+Reason: [簡短說明選擇此風格的原因]
+</st_analysis>
+
+(接著這裡才是真正的回覆內容...)`
       };
       this.generateReply(post, autoStyle, true);
     };
@@ -1523,7 +1529,22 @@ ${stylesList}
       });
 
       if (response && response.success) {
-        this.fillReplyInput(replyInput as HTMLInputElement, response.reply);
+        let finalReply = response.reply;
+        let analysisInfo: string | undefined = undefined;
+
+        // Parse <st_analysis>
+        const analysisMatch = finalReply.match(/<st_analysis>([\s\S]*?)<\/st_analysis>/);
+        if (analysisMatch) {
+          const content = analysisMatch[1];
+          finalReply = finalReply.replace(analysisMatch[0], '').trim();
+          const style = content.match(/Style:\s*(.*)/)?.[1] || '自動';
+          const reason = content.match(/Reason:\s*(.*)/)?.[1] || '';
+          if (style) {
+            analysisInfo = `👉 已選風格：${style}\n💡 理由：${reason}`;
+          }
+        }
+
+        this.fillReplyInput(replyInput as HTMLInputElement, finalReply, analysisInfo);
       } else {
         if (response && response.error && (response.error.includes('Key') || response.error === 'NO_API_KEY')) {
           this.showApiKeyPrompt();
@@ -1654,7 +1675,7 @@ ${stylesList}
     if (oldLoading) oldLoading.remove();
   }
 
-  private fillReplyInput(input: HTMLInputElement | HTMLTextAreaElement, text: string) {
+  private fillReplyInput(input: HTMLInputElement | HTMLTextAreaElement, text: string, analysisInfo?: string) {
     // 聚焦輸入框
     input.focus();
 
@@ -1674,27 +1695,36 @@ ${stylesList}
       // 忽略錯誤
     }
 
-    this.showSuccessMessage();
+    this.showSuccessMessage(analysisInfo);
   }
 
-  private showSuccessMessage() {
+  private showSuccessMessage(analysisInfo?: string) {
     const message = document.createElement('div');
+
+    // Style update for clearer analysis display
+    const contentHtml = analysisInfo
+      ? `<div style="font-weight:600; margin-bottom:6px; font-size:15px;">✅ 智能搭配完成</div>
+           <div style="font-size:13px; line-height:1.4; white-space: pre-wrap; padding-top:4px; border-top:1px solid rgba(255,255,255,0.3);">${analysisInfo}</div>`
+      : '✅ 回覆已生成！';
+
     message.style.cssText = `
       position: fixed;
-      top: 20px;
+      top: 80px;
       right: 20px;
-      background: #42a645;
+      background: ${analysisInfo ? 'linear-gradient(135deg, #42a645 0%, #2ea043 100%)' : '#42a645'};
       color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
+      padding: ${analysisInfo ? '16px 20px' : '12px 16px'};
+      border-radius: 12px;
       font-size: 14px;
       z-index: 10001;
       animation: fadeIn 0.3s ease;
+      max-width: 320px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     `;
-    message.textContent = '✅ 回覆已生成！';
+    message.innerHTML = contentHtml;
 
     document.body.appendChild(message);
-    setTimeout(() => message.remove(), 3000);
+    setTimeout(() => message.remove(), analysisInfo ? 8000 : 3000); // Give users more time to read analysis
   }
 
   private showError(errorMessage: string) {
