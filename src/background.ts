@@ -41,7 +41,14 @@ class BackgroundService {
   }
 
   public async handleGenerateReply(
-    data: { postText: string; style: string; prompt: string; model?: string; tone?: any }
+    data: {
+      postText: string;
+      style: string;
+      prompt: string;
+      model?: string;
+      tone?: any;
+      options?: { useKaomoji?: boolean; isSelfPost?: boolean };
+    }
   ): Promise<any> {
     try {
       // 使用指定的模型，如果沒有指定則默認使用 Gemini
@@ -79,7 +86,11 @@ class BackgroundService {
       const finalPrompt = PromptBuilder.buildReplyPrompt(
         data.postText,
         data.tone || null,
-        data.style
+        data.style,
+        {
+          useKaomoji: data.options?.useKaomoji || false,
+          isSelfPost: data.options?.isSelfPost || false
+        }
       );
 
       console.log('📝 Prompt Constructed:', finalPrompt.substring(0, 100) + '...');

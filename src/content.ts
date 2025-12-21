@@ -784,7 +784,6 @@ class ThreadsAIAssistant {
   private observer: MutationObserver | null = null;
   private isInjected = false;
   private selectedTone: BrandTone | null = null;
-  private useEmoji: boolean = true;
   private useKaomoji: boolean = false;
   private localStorageKey = 'threads-ai-settings';
 
@@ -1175,7 +1174,6 @@ class ThreadsAIAssistant {
       return labelEl;
     };
 
-    togglesGroup.appendChild(createToggle('😊', this.useEmoji, (v) => this.useEmoji = v));
     togglesGroup.appendChild(createToggle('(O_O)', this.useKaomoji, (v) => this.useKaomoji = v));
 
     headerContainer.appendChild(randomBtn);
@@ -1368,7 +1366,6 @@ class ThreadsAIAssistant {
           prompt: style.prompt,
           tone: this.selectedTone,
           options: {
-            useEmoji: this.useEmoji,
             useKaomoji: this.useKaomoji,
             isSelfPost: isSelfPost
           }

@@ -9,10 +9,9 @@ export const PromptBuilder = {
         tone: BrandTone | null,
         styleId: string,
         options: {
-            useEmoji: boolean;
             useKaomoji: boolean;
             isSelfPost: boolean;
-        } = { useEmoji: true, useKaomoji: false, isSelfPost: false }
+        } = { useKaomoji: false, isSelfPost: false }
     ): string {
         // 1. 定義風格策略 (Style Strategy Definitions)
         const styleStrategy = this.getStyleStrategy(styleId);
@@ -27,15 +26,8 @@ export const PromptBuilder = {
         }
 
         // 3. Emoji & Kaomoji Rules
-        let visualRules = "";
-        let taskConstraint = "";
-
-        if (options.useEmoji) {
-            visualRules += "- **MUST use emojis** (😂, 🔥, 🫠, 👀) to aid expression.\n";
-            taskConstraint += "Include at least 1 emoji. ";
-        } else {
-            visualRules += "- STRICTLY NO EMOJIS (🚫). Use text only.\n";
-        }
+        let visualRules = "- STRICTLY NO EMOJIS (🚫). Use text only.\n";
+        let taskConstraint = "Do NOT use emojis. ";
 
         if (options.useKaomoji) {
             visualRules += "- **MUST use Japanese kaomoji** (like (´・ω・`), (≧∇≦)/, (._.), (qm0), (OAO)) naturally at the end or pause.\n";
