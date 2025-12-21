@@ -28,14 +28,18 @@ export const PromptBuilder = {
 
         // 3. Emoji & Kaomoji Rules
         let visualRules = "";
+        let taskConstraint = "";
+
         if (options.useEmoji) {
-            visualRules += "- Feel free to use emojis (😂, 🔥, 🫠) naturally to express emotion.\n";
+            visualRules += "- **MUST use emojis** (😂, 🔥, 🫠, 👀) to aid expression.\n";
+            taskConstraint += "Include at least 1 emoji. ";
         } else {
             visualRules += "- STRICTLY NO EMOJIS (🚫). Use text only.\n";
         }
 
         if (options.useKaomoji) {
-            visualRules += "- Use Japanese kaomoji like (´・ω・`), (≧∇≦)/, (._.) naturally.\n";
+            visualRules += "- **MUST use Japanese kaomoji** (like (´・ω・`), (≧∇≦)/, (._.), (qm0), (OAO)) naturally at the end or pause.\n";
+            taskConstraint += "Include at least 1 kaomoji. ";
         } else {
             visualRules += "- NO Japanese kaomoji.\n";
         }
@@ -56,7 +60,7 @@ CRITICAL STYLE RULES (Must Follow):
    - Use particles like "吧", "呀", "笑死", "確實", "真的", "嗚嗚" naturally.
    - Use lowercase for English words if it feels more natural (e.g. "ui", "api").
 
-3. **Visual Style**:
+3. **Visual Style (STRICT)**:
    ${visualRules}
 
 4. **Content Strategy**:
@@ -70,6 +74,7 @@ CONTEXT:
 
 TASK:
 Write a reply in the "${styleStrategy.name}" style.
+Constraint: ${taskConstraint}
 Keep it concise (under 100 words).
 Output only the reply text.`;
     },
