@@ -1570,10 +1570,32 @@ class ThreadsAIAssistant {
   }
 
   private extractPostText(post: Element): string {
+    // Attempt to identify the author to exclude their name from context
+    let author = '';
+    const authorLink = post.querySelector('a[href^="/@"]');
+    if (authorLink) author = authorLink.textContent?.trim() || '';
+
     const textElements = post.querySelectorAll('[dir="auto"]');
+
+    // Regex for timestamps commonly found in Threads headers (e.g., 12小時, 3m, 5d)
+    const timeRegex = /^\d+\s*(小時|分鐘|分|秒|天|週|年|m|h|d|w|y|s)$/;
+
     const texts = Array.from(textElements)
-      .map(el => el.textContent?.trim())
-      .filter(text => text && text.length > 0);
+      .map(el => el.textContent?.trim() || '')
+      .filter(text => {
+        if (!text) return false;
+
+        // Exclude Author Name (likely header metadata)
+        if (author && text === author) return false;
+
+        // Exclude Timestamps (likely header metadata)
+        if (timeRegex.test(text)) return false;
+
+        // Exclude common UI labels that might be captured
+        if (['翻譯年糕', 'Translate', 'View insights', '查看洞察報告'].includes(text)) return false;
+
+        return true;
+      });
 
     return texts.join(' ').slice(0, 1000);
   }
