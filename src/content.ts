@@ -1,7 +1,7 @@
 import browser from "webextension-polyfill";
 import { type LikeThreshold, DEFAULT_THRESHOLDS } from "./types";
-import { REPLY_STYLES, STORAGE_KEYS } from './lib/constants';
-import type { ReplyStyle } from './lib/types';
+import { REPLY_STYLES, BRAND_TONES, STORAGE_KEYS } from './lib/constants';
+import type { ReplyStyle, BrandTone } from './lib/types';
 
 class ThreadsHelper {
   private thresholds: LikeThreshold[] = DEFAULT_THRESHOLDS;
@@ -144,7 +144,7 @@ class ThreadsHelper {
     const viralPrediction = this.checkViralPotential(post);
 
     if (threshold || viralPrediction) {
-      this.addBookmarkButton(post, threshold, viralPrediction);
+      this.addBookmarkButton(post, viralPrediction);
     }
 
     post.dataset.threadsHelperProcessed = "true";
@@ -212,26 +212,11 @@ class ThreadsHelper {
     return document.documentElement.classList.contains("__fb-dark-mode");
   }
 
-  private getThemeAdjustedColor(color: string): string {
-    const isDark = this.isDarkMode();
 
-    // 為深色模式調整顏色，使其更亮一些
-    if (isDark) {
-      const colorMap: { [key: string]: string } = {
-        "#22C55E": "#34D399", // 更亮的綠色
-        "#EAB308": "#FCD34D", // 更亮的黃色
-        "#F97316": "#FB923C", // 更亮的橙色
-        "#EF4444": "#F87171", // 更亮的紅色
-      };
-      return colorMap[color] || color;
-    }
-
-    return color;
-  }
 
   private addBookmarkButton(
     post: HTMLElement,
-    threshold: LikeThreshold | null,
+    // threshold parameter removed
     isViralPrediction: boolean = false
   ) {
     const existing = post.querySelector(".threads-helper-bookmark");
@@ -400,63 +385,83 @@ class ThreadsHelper {
   private async createLogo() {
     if (this.logoElement) return;
 
-    // 檢查付費狀態
-    const result = await browser.storage.local.get([
-      "isPaidUser",
-      "logoRemoved",
-    ]);
-    if (result.isPaidUser || result.logoRemoved) {
-      return; // 不創建Logo
+    // Inject refined styles
+    if (!document.querySelector("#sonar-floating-styles")) {
+      const style = document.createElement("style");
+      style.id = "sonar-floating-styles";
+      style.textContent = `
+        .sonar-floating-logo {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 16px 8px 8px;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          border-radius: 99px;
+          box-shadow: 
+            0 4px 6px -1px rgba(0, 0, 0, 0.05),
+            0 10px 15px -3px rgba(0, 0, 0, 0.05),
+            0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+          cursor: pointer;
+          z-index: 10000;
+          font-family: 'Inter', -apple-system, sans-serif;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          user-select: none;
+          transform: translateZ(0);
+        }
+
+        .__fb-dark-mode .sonar-floating-logo {
+          background: rgba(30, 41, 59, 0.85); /* Slate-800 */
+          border-color: rgba(255, 255, 255, 0.1);
+          box-shadow: 
+            0 4px 6px -1px rgba(0, 0, 0, 0.2),
+            0 10px 15px -3px rgba(0, 0, 0, 0.2),
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        }
+
+        .sonar-floating-logo:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 
+            0 10px 25px -5px rgba(14, 165, 233, 0.25), /* Sky-500 glow */
+            0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+        }
+        
+        .sonar-logo-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sonar-logo-text {
+          font-size: 14px;
+          font-weight: 700;
+          color: #0f172a; /* Slate-900 */
+          letter-spacing: -0.01em;
+        }
+        
+        .__fb-dark-mode .sonar-logo-text {
+          color: #f8fafc; /* Slate-50 */
+        }
+      `;
+      document.head.appendChild(style);
     }
 
     const logo = document.createElement("div");
-    logo.className = "threads-helper-logo";
+    logo.className = "sonar-floating-logo";
     logo.innerHTML = `
-      <div style="
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      ">
-        <div style="
-          width: 24px;
-          height: 24px;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        "><img src="${browser.runtime.getURL('sonar-icon.png')}" style="width: 100%; height: 100%; object-fit: cover;" alt="Sonar Icon" /></div>
-        <span style="
-          font-size: 13px;
-          font-weight: 600;
-          color: inherit;
-        ">SonarAgent</span>
+      <div class="sonar-logo-icon">
+        <img src="${browser.runtime.getURL('sonar-icon.png')}" style="width: 100%; height: 100%; object-fit: cover;" alt="Sonar">
       </div>
+      <span class="sonar-logo-text">SonarAgent</span>
     `;
 
-    const isDark = this.isDarkMode();
-    logo.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${isDark ? "rgba(38, 38, 38, 0.95)" : "rgba(255, 255, 255, 0.95)"
-      };
-      color: ${isDark ? "#ffffff" : "#000000"};
-      border-radius: 12px;
-      box-shadow: 0 4px 20px ${isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
-      };
-      backdrop-filter: blur(10px);
-      border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-      };
-      z-index: 10000;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      user-select: none;
-    `;
-
-    // 整個 Logo 點擊就開啟 Modal
     logo.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -465,269 +470,261 @@ class ThreadsHelper {
 
     document.body.appendChild(logo);
     this.logoElement = logo;
-
-    // 添加懸停效果
-    logo.addEventListener("mouseenter", () => {
-      logo.style.transform = "translateY(-2px)";
-      logo.style.boxShadow = `0 8px 30px ${isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.15)"
-        }`;
-    });
-
-    logo.addEventListener("mouseleave", () => {
-      logo.style.transform = "translateY(0)";
-      logo.style.boxShadow = `0 4px 20px ${isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
-        }`;
-    });
   }
 
   private showSponsorModal() {
     if (this.modalElement) {
-      // 如果 modal 已存在，先移除再重新創建
       this.modalElement.remove();
       this.modalElement = null;
     }
 
-    const modal = document.createElement("div");
-    modal.className = "threads-helper-modal";
-
-    const isDark = this.isDarkMode();
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10001;
-      backdrop-filter: blur(5px);
-      animation: fadeIn 0.3s ease;
-    `;
-
-    modal.innerHTML = `
-      <div style="
-        background: ${isDark ? "#262626" : "#ffffff"};
-        color: ${isDark ? "#ffffff" : "#000000"};
-        border-radius: 20px;
-        padding: 32px;
-        max-width: 400px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        animation: slideIn 0.3s ease;
-      ">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <div style="
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(45deg, #22C55E, #3B82F6);
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            margin: 0 auto 16px;
-          ">⚡</div>
-          <h2 style="
-            margin: 0 0 8px 0;
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(45deg, #22C55E, #3B82F6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          ">SonarAgent</h2>
-          <p style="
-            margin: 0;
-            font-size: 16px;
-            opacity: 0.8;
-            line-height: 1.5;
-          ">感謝使用我們的擴充功能！</p>
-        </div>
-
-
-        <div style="
-          background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
-      };
-          border-radius: 16px;
-          padding: 24px;
-          margin-bottom: 24px;
-        ">
-          <h3 style="
-            margin: 0 0 16px 0;
-            font-size: 18px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: white;
-          ">
-            <span style="font-size: 20px;">🧵</span>
-            追蹤我的 Threads
-          </h3>
-          <p style="
-            margin: 0 0 16px 0;
-            font-size: 14px;
-            line-height: 1.5;
-            opacity: 0.8;
-          ">獲取最新功能更新和開發進度！</p>
-          <a href="https://www.threads.net/@choyeh5" target="_blank" class="threads-link" style="
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: ${isDark ? "#ffffff" : "#000000"};
-            color: ${isDark ? "#000000" : "#ffffff"};
-            text-decoration: none;
-            border-radius: 12px;
-            text-align: center;
-            font-weight: 600;
-            transition: all 0.2s ease;
-          ">
-            🧵 追蹤 @choyeh5
-          </a>
-        </div>
-
-        <!-- Verification Code Input (hidden by default) -->
-        <div class="verification-section" style="
-          display: none;
-          background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
-      };
-          border-radius: 16px;
-          padding: 24px;
-          margin-bottom: 24px;
-        ">
-          <h3 style="
-            margin: 0 0 16px 0;
-            font-size: 18px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          ">
-            <span style="font-size: 20px;">🔐</span>
-            驗證付款
-          </h3>
-          <p style="
-            margin: 0 0 16px 0;
-            font-size: 14px;
-            line-height: 1.5;
-            opacity: 0.8;
-          ">請輸入付款後獲得的 6 位數字驗證碼：</p>
-          
-          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-            ${Array.from(
-        { length: 6 },
-        (_, i) => `
-              <input 
-                type="text" 
-                class="verification-digit" 
-                data-index="${i}"
-                maxlength="1" 
-                style="
-                  width: 40px;
-                  height: 40px;
-                  text-align: center;
-                  font-size: 18px;
-                  font-weight: 700;
-                  border: 2px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "#e5e5e5"
-          };
-                  border-radius: 8px;
-                  background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "#ffffff"
-          };
-                  color: inherit;
-                  outline: none;
-                  transition: all 0.2s ease;
-                "
-              />
-            `
-      ).join("")}
-          </div>
-          
-          <div class="verification-status" style="
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            display: none;
-          "></div>
-        </div>
-
-        <div style="display: flex; gap: 12px;">
-          <button class="modal-later-btn" style="
-            flex: 1;
-            padding: 12px;
-            background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-      };
-            color: inherit;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-          ">
-            之後再說
-          </button>
-          <button class="modal-close-btn" style="
-            flex: 1;
-            padding: 12px;
-            background: #EF4444;
-            color: #ffffff;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-          ">
-            移除右上角 Logo
-          </button>
-        </div>
-        
-        <div style="text-align: center; margin-top: 16px;">
-          <button class="show-verification-btn" style="
-            background: none;
-            border: none;
-            color: ${isDark ? "rgba(255, 255, 255, 0.6)" : "rgba(0, 0, 0, 0.6)"
-      };
-            cursor: pointer;
-            font-size: 12px;
-            text-decoration: underline;
-            transition: opacity 0.2s ease;
-          ">
-            已付款？輸入驗證碼
-          </button>
-        </div>
-      </div>
-    `;
-
-    // 添加 CSS 動畫
-    if (!document.querySelector("#threads-helper-modal-style")) {
+    // Inject Modal Styles
+    if (!document.querySelector("#sonar-modal-styles")) {
       const style = document.createElement("style");
-      style.id = "threads-helper-modal-style";
+      style.id = "sonar-modal-styles";
       style.textContent = `
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+        .sonar-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.6); /* Slate-900/60 */
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          animation: sonar-fade-in 0.3s ease-out;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        @keyframes slideIn {
-          from { 
-            opacity: 0; 
-            transform: translateY(-20px) scale(0.95); 
-          }
-          to { 
-            opacity: 1; 
-            transform: translateY(0) scale(1); 
-          }
+
+        .sonar-modal-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          border-radius: 24px;
+          padding: 40px;
+          width: 90%;
+          max-width: 420px;
+          max-height: 85vh;
+          overflow-y: auto;
+          box-shadow: 
+            0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+            0 8px 10px -6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+          animation: sonar-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          color: #0f172a; /* Slate-900 */
+        }
+
+        /* Dark Mode Support */
+        .__fb-dark-mode .sonar-modal-card {
+          background: rgba(30, 41, 59, 0.9); /* Slate-800 */
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #f8fafc; /* Slate-50 */
+          box-shadow: 
+            0 20px 25px -5px rgba(0, 0, 0, 0.3), 
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        }
+
+        .sonar-modal-header {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+
+        .sonar-modal-icon {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 16px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, #0ea5e9, #6366f1); /* Sky to Indigo */
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
+        }
+
+        .sonar-modal-title {
+          font-size: 24px;
+          font-weight: 800;
+          margin: 0 0 8px;
+          background: linear-gradient(135deg, #0284c7, #4f46e5);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .__fb-dark-mode .sonar-modal-title {
+          background: linear-gradient(135deg, #38bdf8, #818cf8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .sonar-modal-desc {
+          font-size: 15px;
+          color: #64748b; /* Slate-500 */
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .__fb-dark-mode .sonar-modal-desc {
+          color: #94a3b8; /* Slate-400 */
+        }
+
+        .sonar-section {
+          background: rgba(241, 245, 249, 0.5); /* Slate-100/50 */
+          border: 1px solid rgba(203, 213, 225, 0.5);
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 24px;
+          transition: transform 0.2s;
+        }
+
+        .__fb-dark-mode .sonar-section {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .sonar-section:hover {
+          transform: translateY(-2px);
+        }
+
+        .sonar-section-title {
+          font-size: 16px;
+          font-weight: 600;
+          margin: 0 0 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sonar-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          padding: 12px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: none;
+          text-decoration: none;
+          gap: 8px;
+        }
+
+        .sonar-btn-primary {
+          background: #0f172a;
+          color: white;
+        }
+
+        .__fb-dark-mode .sonar-btn-primary {
+          background: #f8fafc;
+          color: #0f172a;
+        }
+
+        .sonar-btn-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px -5px rgba(0,0,0,0.1);
+        }
+        
+        @keyframes sonar-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes sonar-slide-up { 
+          from { opacity: 0; transform: translateY(20px) scale(0.96); } 
+          to { opacity: 1; transform: translateY(0) scale(1); } 
         }
       `;
       document.head.appendChild(style);
     }
 
-    // 點擊背景關閉
+    const modal = document.createElement("div");
+    modal.className = "sonar-modal-overlay";
+
+    // Check Dark Mode for initial class
+    if (this.isDarkMode()) {
+      modal.classList.add("__fb-dark-mode");
+    }
+
+    modal.innerHTML = `
+      <div class="sonar-modal-card" style="padding: 0; overflow: hidden; max-width: 360px; border-radius: 20px;">
+        
+        <!-- Status Bar -->
+        <div style="padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05);">
+             <div style="display: flex; align-items: center; gap: 8px;">
+                 <div style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);"></div>
+                 <span style="font-size: 12px; font-weight: 600; color: #059669;">AI 服務運作中</span>
+             </div>
+             <a href="#" class="sonar-link-text settings-link" style="font-size: 12px; color: #4f46e5; text-decoration: none; font-weight: 500;">前往設定</a>
+        </div>
+
+        <div style="padding: 24px;">
+            <!-- Hero -->
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="position: relative; width: 80px; height: 80px; margin: 0 auto 16px;">
+                    <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #38bdf8, #6366f1); filter: blur(20px); opacity: 0.3; border-radius: 24px;"></div>
+                    <img src="${browser.runtime.getURL('sonar-icon.png')}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); position: relative; z-index: 1;" alt="Sonar">
+                </div>
+                <h2 style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -0.5px;">
+                    Sonar<span style="background: linear-gradient(to right, #0ea5e9, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Agent</span>
+                </h2>
+                <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; font-weight: 600; margin-top: 4px;">Command Center</p>
+            </div>
+
+            <!-- Toggle Card -->
+            <div style="background: white; border: 1px solid #f1f5f9; border-radius: 16px; padding: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; background: #e0e7ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4f46e5;">
+                        🔥
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; color: #1e293b;">爆文分析 UI</div>
+                        <div style="font-size: 10px; color: #94a3b8;">顯示貼文情感與指標</div>
+                    </div>
+                </div>
+                <!-- Fake Toggle (Visual Only for now, logic handled in Popup) -->
+                 <div style="width: 44px; height: 24px; background: #6366f1; border-radius: 99px; position: relative; cursor: pointer;">
+                    <div style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></div>
+                 </div>
+            </div>
+            
+            <!-- Main Button -->
+             <button class="settings-btn" style="
+                width: 100%;
+                background: #0f172a;
+                color: white;
+                border: none;
+                padding: 16px;
+                border-radius: 14px;
+                font-size: 15px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                cursor: pointer;
+                box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3);
+                transition: transform 0.2s;
+             ">
+                <span>開放設定與模型</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #a5b4fc;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+             </button>
+
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #f1f5f9;">
+             <a href="https://www.threads.net/@choyeh5" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; text-decoration: none; padding: 6px 16px; background: white; border-radius: 99px; border: 1px solid #e2e8f0;">
+                <span>🤝</span> 追蹤開發者 @choyeh5
+             </a>
+        </div>
+
+      </div>
+
+    `;
+
+    // Click Outside Close
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         modal.remove();
@@ -735,185 +732,19 @@ class ThreadsHelper {
       }
     });
 
-    document.body.appendChild(modal);
-    this.modalElement = modal;
-
-    // 添加事件監聽器
-    const coffeeLink = modal.querySelector(".coffee-link") as HTMLElement;
-    if (coffeeLink) {
-      coffeeLink.addEventListener("mouseenter", () => {
-        coffeeLink.style.transform = "translateY(-2px)";
-        coffeeLink.style.boxShadow = "0 8px 20px rgba(255,221,0,0.3)";
-      });
-      coffeeLink.addEventListener("mouseleave", () => {
-        coffeeLink.style.transform = "translateY(0)";
-        coffeeLink.style.boxShadow = "none";
-      });
-    }
-
-    const threadsLink = modal.querySelector(".threads-link") as HTMLElement;
-    if (threadsLink) {
-      threadsLink.addEventListener("mouseenter", () => {
-        threadsLink.style.transform = "translateY(-2px)";
-        threadsLink.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-      });
-      threadsLink.addEventListener("mouseleave", () => {
-        threadsLink.style.transform = "translateY(0)";
-        threadsLink.style.boxShadow = "none";
-      });
-    }
-
-    const laterBtn = modal.querySelector(".modal-later-btn") as HTMLElement;
-    if (laterBtn) {
-      laterBtn.addEventListener("click", () => {
+    // Link Actions
+    const settingsLinks = modal.querySelectorAll('.settings-link, .settings-btn');
+    settingsLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        browser.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
         modal.remove();
         this.modalElement = null;
-      });
-      laterBtn.addEventListener("mouseenter", () => {
-        laterBtn.style.background = isDark
-          ? "rgba(255, 255, 255, 0.2)"
-          : "rgba(0, 0, 0, 0.2)";
-      });
-      laterBtn.addEventListener("mouseleave", () => {
-        laterBtn.style.background = isDark
-          ? "rgba(255, 255, 255, 0.1)"
-          : "rgba(0, 0, 0, 0.1)";
-      });
-    }
-
-    const closeBtn = modal.querySelector(".modal-close-btn") as HTMLElement;
-    if (closeBtn) {
-      closeBtn.addEventListener("click", async () => {
-        // 只跳轉到贊助頁面，不刪除 Logo
-        window.open("https://buymeacoffee.com/ray948787o/e/456549", "_blank");
-
-        modal.remove();
-        this.modalElement = null;
-      });
-      closeBtn.addEventListener("mouseenter", () => {
-        closeBtn.style.background = "#DC2626";
-        closeBtn.style.transform = "translateY(-1px)";
-      });
-      closeBtn.addEventListener("mouseleave", () => {
-        closeBtn.style.background = "#EF4444";
-        closeBtn.style.transform = "translateY(0)";
-      });
-    }
-
-    // 顯示驗證碼輸入區域
-    const showVerificationBtn = modal.querySelector(".show-verification-btn") as HTMLElement;
-    if (showVerificationBtn) {
-      showVerificationBtn.addEventListener("click", () => {
-        const verificationSection = modal.querySelector(
-          ".verification-section"
-        ) as HTMLElement;
-        if (verificationSection) {
-          verificationSection.style.display = "block";
-          showVerificationBtn.style.display = "none";
-          // 焦點到第一個輸入框
-          const firstInput = modal.querySelector(
-            ".verification-digit"
-          ) as HTMLInputElement;
-          if (firstInput) firstInput.focus();
-        }
-      });
-    }
-
-    // 驗證碼輸入邏輯
-    const digitInputs = modal.querySelectorAll(
-      ".verification-digit"
-    ) as NodeListOf<HTMLInputElement>;
-    digitInputs.forEach((input, index) => {
-      input.addEventListener("input", (e) => {
-        const target = e.target as HTMLInputElement;
-        const value = target.value.replace(/[^0-9]/g, "");
-        target.value = value;
-
-        // 自動跳到下一個輸入框
-        if (value && index < digitInputs.length - 1) {
-          digitInputs[index + 1].focus();
-        }
-
-        // 檢查是否輸入完成
-        this.checkVerificationCode(modal, digitInputs);
-      });
-
-      input.addEventListener("keydown", (e) => {
-        // 退格鍵跳到上一個輸入框
-        if (e.key === "Backspace" && !input.value && index > 0) {
-          digitInputs[index - 1].focus();
-        }
-      });
-
-      input.addEventListener("focus", () => {
-        input.style.borderColor = "#22C55E";
-      });
-
-      input.addEventListener("blur", () => {
-        input.style.borderColor = isDark
-          ? "rgba(255, 255, 255, 0.2)"
-          : "#e5e5e5";
       });
     });
-  }
 
-  private async checkVerificationCode(
-    modal: HTMLElement,
-    inputs: NodeListOf<HTMLInputElement>
-  ) {
-    const code = Array.from(inputs)
-      .map((input) => input.value)
-      .join("");
-    const statusDiv = modal.querySelector(
-      ".verification-status"
-    ) as HTMLElement;
-
-    if (code.length === 6) {
-      // 向 background script 發送驗證請求
-      const response = await browser.runtime.sendMessage({
-        action: "verifyCode",
-        code: code,
-      });
-
-      statusDiv.style.display = "block";
-
-      if (response.success) {
-        statusDiv.style.background = "rgba(34, 197, 94, 0.2)";
-        statusDiv.style.color = "#22C55E";
-        statusDiv.textContent = "✅ 驗證成功！Logo 已永久移除";
-
-        // 移除 Logo 並關閉 Modal
-        setTimeout(() => {
-          modal.remove();
-          this.modalElement = null;
-          if (this.logoElement) {
-            this.logoElement.remove();
-          }
-        }, 2000);
-      } else {
-        statusDiv.style.background = "rgba(239, 68, 68, 0.2)";
-        statusDiv.style.color = "#EF4444";
-        statusDiv.textContent = "❌ 驗證碼錯誤，請重新輸入";
-
-        // 清空輸入框
-        inputs.forEach((input) => {
-          input.value = "";
-          input.style.borderColor = "#EF4444";
-        });
-        inputs[0].focus();
-
-        setTimeout(() => {
-          statusDiv.style.display = "none";
-          inputs.forEach((input) => {
-            input.style.borderColor = modal.classList.contains("__fb-dark-mode")
-              ? "rgba(255, 255, 255, 0.2)"
-              : "#e5e5e5";
-          });
-        }, 3000);
-      }
-    } else if (code.length > 0) {
-      statusDiv.style.display = "none";
-    }
+    document.body.appendChild(modal);
+    this.modalElement = modal;
   }
 
 
@@ -952,6 +783,7 @@ class ThreadsHelper {
 class ThreadsAIAssistant {
   private observer: MutationObserver | null = null;
   private isInjected = false;
+  private selectedTone: BrandTone | null = null; // Default to null (no specific tone)
 
   constructor() {
     this.init();
@@ -1006,6 +838,9 @@ class ThreadsAIAssistant {
     );
 
     return uniquePosts.filter(post => {
+      // 排除 Sonar 自己的 UI 元素
+      if (post.closest('.sonar-modal-overlay') || post.closest('.sonar-floating-logo')) return false;
+
       // 排除太小的元素 (可能是按鈕本身)
       if (post.getBoundingClientRect().height < 50) return false;
 
@@ -1115,18 +950,118 @@ class ThreadsAIAssistant {
     this.hideExistingSelectors();
 
     const selector = this.createStyleSelector(post);
-    const rect = button.getBoundingClientRect();
 
+    // Initial hidden state for calculation
+    selector.style.visibility = 'hidden';
     selector.style.position = 'fixed';
-    selector.style.top = `${rect.bottom + 8}px`;
-    selector.style.left = `${rect.left}px`;
-    selector.style.zIndex = '10000';
+    selector.style.top = '0';
+    selector.style.left = '0';
+    // Add max-height/width constraints to prevent it from being huge
+    selector.style.maxHeight = '60vh';
+    selector.style.maxWidth = '90vw';
+    selector.style.overflowY = 'auto';
 
     document.body.appendChild(selector);
 
+    const buttonRect = button.getBoundingClientRect();
+    const selectorRect = selector.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const padding = 16;
+
+    // Default: Below
+    let top = buttonRect.bottom + 8;
+    let left = buttonRect.left;
+
+    // 1. Vertical Logic
+    // If not enough space below
+    if (top + selectorRect.height > viewportHeight - padding) {
+      const spaceAbove = buttonRect.top - padding;
+      const spaceBelow = viewportHeight - top - padding;
+
+      // If fits above, go above
+      if (spaceAbove > selectorRect.height) {
+        top = buttonRect.top - selectorRect.height - 8;
+      } else {
+        // If neither fits perfectly, pick the larger side and cap the height
+        if (spaceAbove > spaceBelow) {
+          // Pin to top margin, set max-height to fit between top and button
+          top = padding; // actually logic: go as high as needed but max at padding
+          // BETTER SCRIPT: Position above button, but cap height
+          // Logic: "Above" means top = buttonRect.top - height - 8.
+          // If height is too big, we need to shrink it? 
+          // Let's just pin to top padding if huge.
+          // Or simply:
+          top = Math.max(padding, buttonRect.top - selectorRect.height - 8);
+          // Force max-height if needed? selector.style.maxHeight is already 60vh.
+          // If 60vh fits, great. If not, it will scroll.
+
+          // If current top + height > button top? No, logic is:
+          // We want to be above. 
+          // If we pin to padding, are we overlapping button?
+          // If padding + height > button.top, we overlap.
+
+          // Let's simplify:
+          // If fits above? yes -> go above.
+          // If not fits above (and not below)?
+          // Check which space is bigger.
+          // If space above is bigger:
+          //   top = padding;
+          //   maxHeight = spaceAbove;
+          // If space below is bigger:
+          //   top = buttonRect.bottom + 8;
+          //   maxHeight = spaceBelow;
+        } else {
+          // Below is bigger (but still not full fit?), pin to where it is.
+          // top is already buttonRect.bottom + 8
+          // We might need to restrict max-height to fit in viewport
+          // selector.style.maxHeight = `${spaceBelow}px`; // dynamic adjustment
+        }
+      }
+    }
+
+    // Re-check Vertical with simpler logic
+    // Calculate space below and above
+    const spaceBelow = viewportHeight - (buttonRect.bottom + 8) - padding;
+    const spaceAbove = buttonRect.top - padding - 8;
+
+    // Prefer below if it fits, or if it has more space than above
+    const fitsBelow = spaceBelow >= selectorRect.height;
+    const fitsAbove = spaceAbove >= selectorRect.height;
+
+    if (fitsBelow || spaceBelow >= spaceAbove) {
+      top = buttonRect.bottom + 8;
+      // Cap height if strictly needed?
+      if (!fitsBelow) {
+        selector.style.maxHeight = `${spaceBelow}px`;
+      }
+    } else {
+      // Go Above
+      top = buttonRect.top - selectorRect.height - 8;
+      if (!fitsAbove) {
+        // If doesn't fit above, pin to top padding and size down
+        top = padding;
+        selector.style.maxHeight = `${spaceAbove + 8}px`; // roughly available space
+      }
+    }
+
+    // 2. Horizontal Logic
+    if (left + selectorRect.width > viewportWidth - padding) {
+      left = viewportWidth - selectorRect.width - padding;
+    }
+    if (left < padding) left = padding;
+
+    // Apply Final
+    selector.style.top = `${top}px`;
+    selector.style.left = `${left}px`;
+    selector.style.visibility = 'visible';
+
+    // Ensure styles applied
+    selector.style.zIndex = '10000';
+
     setTimeout(() => {
       const handleClickOutside = (e: Event) => {
-        if (!selector.contains(e.target as Node)) {
+        if (!selector.contains(e.target as Node) && !button.contains(e.target as Node)) {
           selector.remove();
           document.removeEventListener('click', handleClickOutside);
         }
@@ -1143,22 +1078,87 @@ class ThreadsAIAssistant {
       border: 1px solid #ddd;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      padding: 8px;
-      min-width: 280px;
+      padding: 12px;
+      min-width: 320px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
 
-    const title = document.createElement('div');
-    title.style.cssText = `
-      padding: 12px 16px 8px;
+    // 1. Brand Tone Section
+    const toneTitle = document.createElement('div');
+    toneTitle.style.cssText = `
       font-weight: 600;
-      font-size: 14px;
-      color: #1c1e21;
-      border-bottom: 1px solid #f0f0f0;
+      font-size: 13px;
+      color: #65676b;
       margin-bottom: 8px;
     `;
-    title.textContent = '選擇回覆風格';
-    selector.appendChild(title);
+    toneTitle.textContent = '語調 (選填)';
+    selector.appendChild(toneTitle);
+
+    const toneContainer = document.createElement('div');
+    toneContainer.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f0f0f0;
+    `;
+
+    BRAND_TONES.forEach(tone => {
+      const toneChip = document.createElement('div');
+      toneChip.textContent = tone.name;
+      const isSelected = this.selectedTone?.id === tone.id;
+
+      toneChip.style.cssText = `
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 12px;
+        cursor: pointer;
+        border: 1px solid ${isSelected ? '#1877f2' : '#ddd'};
+        background: ${isSelected ? '#1877f2' : 'white'};
+        color: ${isSelected ? 'white' : '#1c1e21'};
+        transition: all 0.2s;
+      `;
+
+      toneChip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Toggle selection
+        if (this.selectedTone?.id === tone.id) {
+          this.selectedTone = null;
+          toneChip.style.background = 'white';
+          toneChip.style.color = '#1c1e21';
+          toneChip.style.border = '1px solid #ddd';
+        } else {
+          // Deselect others
+          // (Simplification: just re-render or manually update styles via loops if needed. 
+          // Re-rendering selector might be cleaner but for now let's just update styles)
+          Array.from(toneContainer.children).forEach((child: any) => {
+            child.style.background = 'white';
+            child.style.color = '#1c1e21';
+            child.style.border = '1px solid #ddd';
+          });
+
+          this.selectedTone = tone;
+          toneChip.style.background = '#1877f2';
+          toneChip.style.color = 'white';
+          toneChip.style.border = '1px solid #1877f2';
+        }
+      });
+
+      toneContainer.appendChild(toneChip);
+    });
+    selector.appendChild(toneContainer);
+
+    // 2. Reply Style Section
+    const styleTitle = document.createElement('div');
+    styleTitle.style.cssText = `
+      font-weight: 600;
+      font-size: 13px;
+      color: #65676b;
+      margin-bottom: 8px;
+    `;
+    styleTitle.textContent = '回覆風格 (點擊生成)';
+    selector.appendChild(styleTitle);
 
     REPLY_STYLES.forEach(style => {
       const option = this.createStyleOption(style, post);
@@ -1210,7 +1210,18 @@ class ThreadsAIAssistant {
       return;
     }
 
-    const replyInput = this.findReplyInput(post);
+    let replyInput = this.findReplyInput(post);
+
+    // Auto-open Reply Modal if not found
+    if (!replyInput) {
+      const opened = await this.openReplyModal(post);
+      if (opened) {
+        // Wait a moment for animation
+        await new Promise(resolve => setTimeout(resolve, 500));
+        replyInput = this.findReplyInput(post);
+      }
+    }
+
     if (!replyInput) {
       this.showError('找不到回覆輸入框，請先點擊回覆按鈕');
       return;
@@ -1224,7 +1235,8 @@ class ThreadsAIAssistant {
         data: {
           postText,
           style: style.id,
-          prompt: style.prompt
+          prompt: style.prompt,
+          tonePrompt: this.selectedTone?.prompt
         }
       });
 
@@ -1243,6 +1255,29 @@ class ThreadsAIAssistant {
     } finally {
       this.hideLoadingState();
     }
+  }
+
+  private async openReplyModal(post: Element): Promise<boolean> {
+    // Common selectors for the reply button
+    const replyBtnSelectors = [
+      'div[role="button"][aria-label="回覆"]',
+      'div[role="button"][aria-label="Reply"]',
+      'svg[aria-label="回覆"]',
+      'svg[aria-label="Reply"]'
+    ];
+
+    for (const selector of replyBtnSelectors) {
+      const btn = post.querySelector(selector);
+      if (btn) {
+        // Click the button (or closest clickable parent)
+        const clickable = btn.closest('[role="button"]') || btn.parentElement;
+        if (clickable instanceof HTMLElement) {
+          clickable.click();
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private extractPostText(post: Element): string {
@@ -1456,7 +1491,7 @@ class ThreadsAIAssistant {
 
 // 全域實例引用
 let threadsHelperInstance: ThreadsHelper;
-let threadsAIAssistantInstance: ThreadsAIAssistant;
+
 
 if (typeof window !== "undefined") {
   threadsHelperInstance = new ThreadsHelper();
@@ -1475,11 +1510,12 @@ if (typeof window !== "undefined") {
   // Initialize AI Assistant
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      threadsAIAssistantInstance = new ThreadsAIAssistant();
+      new ThreadsAIAssistant();
     });
   } else {
-    threadsAIAssistantInstance = new ThreadsAIAssistant();
+    new ThreadsAIAssistant();
   }
 }
+
 
 export { ThreadsHelper, ThreadsAIAssistant };

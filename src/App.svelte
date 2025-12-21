@@ -1,156 +1,212 @@
 <script lang="ts">
   import browser from "webextension-polyfill";
+  import { onMount } from "svelte";
+  import { STORAGE_KEYS } from "./lib/constants";
+
+  let isAiReady = false;
+  let showViralUI = true;
+  let loading = true;
+
+  onMount(async () => {
+    try {
+      const data = await browser.storage.local.get([
+        STORAGE_KEYS.GEMINI_API_KEY,
+        STORAGE_KEYS.OPENAI_API_KEY,
+        STORAGE_KEYS.CLAUDE_API_KEY,
+        STORAGE_KEYS.OPENROUTER_API_KEY,
+        STORAGE_KEYS.SHOW_VIRAL_UI,
+      ]);
+
+      // Check if any API key is present
+      isAiReady = !!(
+        data[STORAGE_KEYS.GEMINI_API_KEY] ||
+        data[STORAGE_KEYS.OPENAI_API_KEY] ||
+        data[STORAGE_KEYS.CLAUDE_API_KEY] ||
+        data[STORAGE_KEYS.OPENROUTER_API_KEY]
+      );
+
+      showViralUI = data[STORAGE_KEYS.SHOW_VIRAL_UI] ?? true;
+    } catch (e) {
+      console.error("Failed to load settings:", e);
+    } finally {
+      loading = false;
+    }
+  });
+
+  async function toggleViralUI() {
+    showViralUI = !showViralUI;
+    await browser.storage.local.set({
+      [STORAGE_KEYS.SHOW_VIRAL_UI]: showViralUI,
+    });
+  }
+
+  async function openOptions() {
+    try {
+      await browser.runtime.openOptionsPage();
+    } catch (e) {
+      // Fallback
+      const optionsUrl = browser.runtime.getURL("src/options/options.html");
+      await browser.tabs.create({ url: optionsUrl });
+    }
+  }
 </script>
 
-<div class="popup-container">
-  <!-- Header -->
-  <header class="header">
-    <div class="logo-icon">
-      <img
-        src="/icon/icon-128x128.png"
-        alt="SonarAgent Logo"
-        style="width: 100%; height: 100%; object-fit: contain;"
-      />
+<div
+  class="w-[360px] min-h-[420px] bg-slate-50 flex flex-col font-sans transition-colors duration-300"
+>
+  <!-- Status Bar -->
+  <div
+    class="px-6 py-3 flex items-center justify-between border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-10"
+  >
+    <div class="flex items-center gap-2">
+      <div class="relative flex h-2.5 w-2.5">
+        {#if isAiReady}
+          <span
+            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"
+          ></span>
+        {:else}
+          <span
+            class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-300"
+          ></span>
+        {/if}
+      </div>
+      <span
+        class="text-xs font-semibold {isAiReady
+          ? 'text-emerald-700'
+          : 'text-slate-500'}"
+      >
+        {isAiReady ? "AI 服務運作中" : "未設定 API Key"}
+      </span>
     </div>
-    <h1 class="title">SonarAgent</h1>
-    <p class="subtitle">感謝使用我們的擴充功能！</p>
-  </header>
 
-  <!-- Actions -->
-  <section class="card">
-    <button
-      on:click={async () => {
-        try {
-          await browser.runtime.openOptionsPage();
-        } catch (e) {
-          console.error("Failed to open options page:", e);
-          const optionsUrl = browser.runtime.getURL("src/options/options.html");
-          await browser.tabs.create({ url: optionsUrl });
-        }
-      }}
-      class="btn btn-primary"
-    >
-      ⚙️ 開啟設定 (Open Settings)
-    </button>
-    <p class="card-description mt-4 text-center">
-      設定 AI 模型、API Key 與介面偏好
-    </p>
-  </section>
-
-  <!-- Links -->
-  <div class="links">
-    <a href="https://www.threads.net/@choyeh5" target="_blank" class="link">
-      🧵 追蹤開發者
-    </a>
+    {#if !loading && !isAiReady}
+      <button
+        on:click={openOptions}
+        class="text-xs text-primary-600 hover:text-primary-700 font-medium underline underline-offset-2"
+      >
+        前往設定
+      </button>
+    {/if}
   </div>
+
+  <main class="flex-1 p-6 flex flex-col items-center w-full">
+    <!-- Hero Branding -->
+    <div class="mb-8 text-center group">
+      <div class="mb-4 relative inline-block">
+        <div
+          class="absolute inset-0 bg-gradient-to-tr from-sky-400 to-indigo-500 rounded-2xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity duration-500"
+        ></div>
+        <img
+          src="/icon/icon-128x128.png"
+          alt="Sonar"
+          class="relative w-20 h-20 rounded-2xl shadow-xl transform group-hover:scale-105 transition-transform duration-300"
+        />
+      </div>
+      <h1 class="text-2xl font-black text-slate-900 tracking-tight mb-1">
+        Sonar<span
+          class="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-indigo-600"
+          >Agent</span
+        >
+      </h1>
+      <p class="text-xs font-medium text-slate-500 uppercase tracking-widest">
+        Command Center
+      </p>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div
+      class="w-full bg-white rounded-2xl p-1 shadow-sm border border-slate-100 mb-6"
+    >
+      <label
+        class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group/item"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg shadow-sm group-hover/item:scale-110 transition-transform"
+          >
+            🔥
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-bold text-slate-700">爆文分析 UI</span>
+            <span class="text-[10px] text-slate-400 leading-tight"
+              >顯示貼文情感與指標</span
+            >
+          </div>
+        </div>
+
+        <!-- Toggle Switch -->
+        <button
+          on:click|preventDefault={toggleViralUI}
+          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {showViralUI
+            ? 'bg-indigo-500'
+            : 'bg-slate-200'}"
+        >
+          <span class="sr-only">Toggle Viral UI</span>
+          <span
+            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {showViralUI
+              ? 'translate-x-5'
+              : 'translate-x-0'}"
+          ></span>
+        </button>
+      </label>
+    </div>
+
+    <!-- Primary Action: Open Dashbord -->
+    <button
+      on:click={openOptions}
+      class="w-full group relative overflow-hidden rounded-xl bg-slate-900 p-4 shadow-lg transition-all hover:shadow-2xl hover:-translate-y-0.5"
+    >
+      <div
+        class="absolute inset-0 bg-gradient-to-r from-sky-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      ></div>
+      <div class="relative flex items-center justify-center gap-3">
+        <span class="text-white font-bold text-base tracking-wide"
+          >開啟設定與模型</span
+        >
+        <svg
+          class="w-5 h-5 text-indigo-300 group-hover:text-white transition-colors"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 7l5 5m0 0l-5 5m5-5H6"
+          />
+        </svg>
+      </div>
+    </button>
+  </main>
+
+  <!-- Footer -->
+  <footer
+    class="p-4 flex justify-center border-t border-slate-100 bg-slate-50/50"
+  >
+    <a
+      href="https://www.threads.net/@choyeh5"
+      target="_blank"
+      class="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors py-2 px-4 rounded-full hover:bg-white hover:shadow-sm"
+    >
+      <span>🤝</span>
+      <span>追蹤開發者 @choyeh5</span>
+    </a>
+  </footer>
 </div>
 
 <style>
-  .popup-container {
-    padding: 32px;
-    min-width: 350px;
-    max-width: 400px;
-    background-color: #ffffff;
-    color: #000000;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      sans-serif;
-  }
-
-  /* Header */
-  .header {
-    margin-bottom: 24px;
-    text-align: center;
-  }
-
-  .logo-icon {
-    width: 60px;
-    height: 60px;
-    /* background: linear-gradient(45deg, #22c55e, #3b82f6); */
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    margin: 0 auto 16px;
-  }
-
-  .title {
-    margin: 0 0 8px 0;
-    font-size: 24px;
-    font-weight: 700;
-    background: linear-gradient(45deg, #22c55e, #3b82f6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .subtitle {
+  :global(body) {
     margin: 0;
-    font-size: 16px;
-    opacity: 0.8;
-    line-height: 1.5;
-  }
-
-  /* Cards */
-  .card {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-
-  .card-description {
-    margin: 8px 0 0 0;
-    font-size: 14px;
-    line-height: 1.5;
-    opacity: 0.8;
-    text-align: center;
-  }
-
-  /* Buttons */
-  .btn {
-    display: block;
-    width: 100%;
-    padding: 12px;
-    text-decoration: none;
-    border-radius: 12px;
-    text-align: center;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-sizing: border-box;
-    font-size: 14px;
-  }
-
-  .btn:hover {
-    transform: translateY(-2px);
-  }
-
-  .btn-primary {
-    background: #000000;
-    color: #ffffff;
-  }
-
-  .btn-primary:hover {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  }
-
-  /* Links */
-  .links {
-    text-align: center;
-    margin-top: 16px;
-  }
-
-  .link {
-    color: #666;
-    text-decoration: none;
-    font-size: 13px;
-    transition: color 0.2s;
-  }
-
-  .link:hover {
-    color: #000;
-    text-decoration: underline;
+    padding: 0;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 </style>

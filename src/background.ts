@@ -1,15 +1,14 @@
 import browser from "webextension-polyfill";
 import { StorageManager } from './lib/storage';
-import { GeminiProvider } from './lib/providers/gemini';
-import { OpenAIProvider } from './lib/providers/openai';
-import { ClaudeProvider } from './lib/providers/claude';
+
 import { OpenRouterProvider } from './lib/providers/openrouter';
 import type { AIModelProvider } from './lib/providers/base';
 
 console.log("Hello from the background!");
 
 // 硬編碼驗證碼 (在實際部署時可以通過其他方式配置)
-const VERIFICATION_CODE = "250912";
+// 硬編碼驗證碼 (已移除驗證功能)
+// const VERIFICATION_CODE = "250912";
 
 browser.runtime.onInstalled.addListener((details) => {
   console.log("Extension installed:", details);
@@ -26,24 +25,23 @@ class BackgroundService {
   }
 
   private initializeProviders() {
-    // 初始化所有 AI 模型提供者
-    const geminiProvider = new GeminiProvider();
-    const openaiProvider = new OpenAIProvider();
-    const claudeProvider = new ClaudeProvider();
-    const openRouterProvider = new OpenRouterProvider();
-    const grokProvider = new OpenRouterProvider('x-ai/grok-code-fast-1', 'Grok Code Fast');
+    // 2025 Model Initialization via OpenRouter
+    const grokProvider = new OpenRouterProvider('x-ai/grok-code-fast-1', 'Grok Code Fast 1');
+    const geminiProvider = new OpenRouterProvider('google/gemini-3-flash', 'Google Gemini 3 Flash');
+    const openaiProvider = new OpenRouterProvider('openai/gpt-5.2', 'OpenAI GPT-5.2');
+    const claudeProvider = new OpenRouterProvider('anthropic/claude-sonnet-4.5', 'Claude Sonnet 4.5');
 
+    // Register Providers
+    this.providers.set(grokProvider.config.id, grokProvider);
     this.providers.set(geminiProvider.config.id, geminiProvider);
     this.providers.set(openaiProvider.config.id, openaiProvider);
     this.providers.set(claudeProvider.config.id, claudeProvider);
-    this.providers.set(openRouterProvider.config.id, openRouterProvider);
-    this.providers.set(grokProvider.config.id, grokProvider);
 
-    console.log('🤖 AI 模型提供者已初始化:', Array.from(this.providers.keys()));
+    console.log('🤖 AI 模型提供者已更新 (2025):', Array.from(this.providers.keys()));
   }
 
   public async handleGenerateReply(
-    data: { postText: string; style: string; prompt: string; model?: string }
+    data: { postText: string; style: string; prompt: string; model?: string; tonePrompt?: string }
   ): Promise<any> {
     try {
       // 使用指定的模型，如果沒有指定則默認使用 Gemini
@@ -77,10 +75,16 @@ class BackgroundService {
         };
       }
 
+      // Combine Style and Tone Prompts
+      let finalPrompt = data.prompt;
+      if (data.tonePrompt) {
+        finalPrompt = `${data.tonePrompt}\n\n${finalPrompt}`;
+      }
+
       // 使用提供者生成回覆
       const result = await provider.generateReply({
         postText: data.postText,
-        stylePrompt: data.prompt,
+        stylePrompt: finalPrompt,
         apiKey: apiKey
       });
 
@@ -126,24 +130,13 @@ class BackgroundService {
   public async getApiKeyForModel(modelId: string): Promise<string | null> {
     const keys = await StorageManager.getApiKeys();
     try {
-      switch (modelId) {
-        case 'gemini-1.5-flash':
-          return keys.geminiApiKey || null;
+      // Legacy Check (Optional: keep if you want strict separation, but simplified for 2025 update)
+      if (modelId === 'gemini-1.5-flash') return keys.geminiApiKey || null;
+      if (modelId === 'gpt-4o') return keys.openaiApiKey || null;
+      if (modelId === 'claude-3-haiku') return keys.claudeApiKey || null;
 
-        case 'gpt-4o':
-          return keys.openaiApiKey || null;
-
-        case 'claude-3-haiku':
-          return keys.claudeApiKey || null;
-
-        case 'google/gemini-2.0-flash-exp:free':
-        case 'x-ai/grok-code-fast-1':
-          return keys.openrouterApiKey || null;
-
-        default:
-          console.error('❌ 未知的模型 ID:', modelId);
-          return null;
-      }
+      // Default: All other models (including new 2025 ones) go through OpenRouter
+      return keys.openrouterApiKey || null;
     } catch (error) {
       console.error('❌ 獲取 API Key 失敗:', error);
       return null;
@@ -185,18 +178,9 @@ const backgroundService = new BackgroundService();
 browser.runtime.onMessage.addListener((request: any, _sender, _sendResponse) => {
   // Handle existing verification logic
   if (request.action === 'verifyCode') {
-    const isValid = request.code === VERIFICATION_CODE;
-
-    if (isValid) {
-      // 驗證成功，標記為付費用戶
-      browser.storage.local.set({
-        isPaidUser: true,
-        verifiedAt: Date.now()
-      });
-    }
-
-    return Promise.resolve({ success: isValid });
+    return Promise.resolve({ success: false }); // Deprecated
   }
+
 
   // Handle AI logic
   if (request.type === 'GENERATE_REPLY') {
