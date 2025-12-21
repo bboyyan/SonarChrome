@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { StorageManager } from './lib/storage';
-
+import { PromptBuilder } from './lib/prompt-builder';
 import { OpenRouterProvider } from './lib/providers/openrouter';
 import type { AIModelProvider } from './lib/providers/base';
 
@@ -41,7 +41,7 @@ class BackgroundService {
   }
 
   public async handleGenerateReply(
-    data: { postText: string; style: string; prompt: string; model?: string; tonePrompt?: string }
+    data: { postText: string; style: string; prompt: string; model?: string; tone?: any }
   ): Promise<any> {
     try {
       // 使用指定的模型，如果沒有指定則默認使用 Gemini
@@ -75,16 +75,20 @@ class BackgroundService {
         };
       }
 
-      // Combine Style and Tone Prompts
-      let finalPrompt = data.prompt;
-      if (data.tonePrompt) {
-        finalPrompt = `${data.tonePrompt}\n\n${finalPrompt}`;
-      }
+      // Use PromptBuilder to construct the sophisticated prompt
+      const finalPrompt = PromptBuilder.buildReplyPrompt(
+        data.postText,
+        data.tone || null,
+        data.style
+      );
+
+      console.log('📝 Prompt Constructed:', finalPrompt.substring(0, 100) + '...');
 
       // 使用提供者生成回覆
       const result = await provider.generateReply({
-        postText: data.postText,
+        // postText is included in stylePrompt by PromptBuilder
         stylePrompt: finalPrompt,
+        postText: "",
         apiKey: apiKey
       });
 

@@ -28,6 +28,11 @@ export abstract class AIModelProvider {
     abstract generateReply(request: GenerateReplyRequest): Promise<GenerateReplyResponse>;
 
     protected formatPrompt(postText: string, stylePrompt: string): string {
+        // If postText is empty, assume stylePrompt is the full, pre-formatted prompt (from PromptBuilder)
+        if (!postText) {
+            return stylePrompt;
+        }
+
         return `${stylePrompt}
 
 貼文內容：「${postText}」

@@ -2,46 +2,64 @@ import type { ReplyStyle, BrandTone } from './types';
 
 export const REPLY_STYLES: ReplyStyle[] = [
     {
-        id: 'supportive',
-        name: '附和贊同',
-        description: '表達支持和認同',
-        prompt: '請以贊同和支持的語氣回覆這則貼文，表達正面的認同感。回覆應該簡潔、真誠，並且符合繁體中文的表達習慣。不要使用表情符號，除非原文有使用。'
+        id: 'connection',
+        name: '建立連結',
+        description: '高度共鳴，表達「我懂你」',
+        prompt: 'High Resonance'
     },
     {
-        id: 'humorous',
-        name: '幽默風趣',
-        description: '輕鬆幽默的回應',
-        prompt: '請以幽默風趣的語氣回覆這則貼文，可以使用輕鬆的玩笑或有趣的觀點。回覆應該正面、不冒犯，並且符合繁體中文的幽默表達。避免過度使用表情符號。'
+        id: 'value',
+        name: '隨性見解',
+        description: '分享經驗但不說教',
+        prompt: 'Casual Insight'
     },
     {
-        id: 'questioning',
-        name: '提出疑問',
-        description: '好奇詢問更多細節',
-        prompt: '請以好奇和詢問的語氣回覆這則貼文，提出相關的問題來了解更多細節或不同觀點。問題應該有建設性且真誠。使用繁體中文表達。'
+        id: 'chill',
+        name: '圈內搭話',
+        description: '輕鬆互動，微羨慕或假抱怨',
+        prompt: 'Chill / Circle Talk'
     },
     {
-        id: 'professional',
-        name: '專業分析',
-        description: '提供專業見解',
-        prompt: '請以專業和分析的語氣回覆這則貼文，提供有見地的觀點或相關的專業知識。回覆應該客觀、資訊豐富，並使用繁體中文表達。'
+        id: 'hype',
+        name: '純粹應援',
+        description: '像朋友一樣幫你打氣',
+        prompt: 'Pure Hype'
     },
     {
-        id: 'encouraging',
-        name: '暖心鼓勵',
-        description: '給予溫暖的鼓勵',
-        prompt: '請以溫暖和鼓勵的語氣回覆這則貼文，給予正面的支持和動力。回覆應該真誠、溫馨，並使用繁體中文表達關懷。'
+        id: 'spicy',
+        name: '辛辣觀點',
+        description: '大膽、稍微逆風的觀點',
+        prompt: 'Spicy Take'
     },
     {
-        id: 'sharing',
-        name: '分享經驗',
-        description: '分享相關的個人經驗',
-        prompt: '請以分享經驗的語氣回覆這則貼文，可以提及類似的經歷或相關的個人體會。回覆應該真實、有關聯性，並使用繁體中文自然表達。'
+        id: 'story',
+        name: '極短編',
+        description: '分享極短的個人故事',
+        prompt: 'Mini Story'
     },
     {
-        id: 'thoughtful',
-        name: '深度思考',
-        description: '提供深入的思考和見解',
-        prompt: '請以深度思考的語氣回覆這則貼文，提供更深層的見解或不同角度的思考。回覆應該有深度、發人深省，並使用繁體中文表達。'
+        id: 'question',
+        name: '好奇提問',
+        description: '真誠追問，引發對話',
+        prompt: 'Curious Question'
+    },
+    {
+        id: 'flex',
+        name: '微炫耀',
+        description: '低調展示實力',
+        prompt: 'Subtle Flex'
+    },
+    {
+        id: 'hook',
+        name: '埋鉤子',
+        description: '話只說一半，引發好奇',
+        prompt: 'Cliffhanger Hook'
+    },
+    {
+        id: 'collab',
+        name: '隨性邀約',
+        description: '拋出合作橄欖枝',
+        prompt: 'Collab Hint'
     }
 ];
 

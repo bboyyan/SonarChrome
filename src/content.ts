@@ -1235,8 +1235,8 @@ class ThreadsAIAssistant {
         data: {
           postText,
           style: style.id,
-          prompt: style.prompt,
-          tonePrompt: this.selectedTone?.prompt
+          prompt: style.prompt, // Keep for fallback or prompt-builder usage? Builder uses styleId.
+          tone: this.selectedTone // Pass full tone object
         }
       });
 
