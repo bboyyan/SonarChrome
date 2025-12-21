@@ -89,7 +89,8 @@ class BackgroundService {
         data.style,
         {
           useKaomoji: data.options?.useKaomoji || false,
-          isSelfPost: data.options?.isSelfPost || false
+          isSelfPost: data.options?.isSelfPost || false,
+          strategy: data.strategy || undefined
         }
       );
 
@@ -236,9 +237,10 @@ ${data.stylesList}
 
 【輸出格式（嚴格遵守）】：
 STYLE: [風格名稱]
+STRATEGY: [一句話回覆策略，例如：先同理對方的困擾，再提出具體的建議]
 REASON: [選擇此風格的簡短理由，10字以內]
 
-**只輸出上述兩行，不要輸出其他任何內容。**`;
+**只輸出上述三行，不要輸出其他任何內容。**`;
 
       console.log('🔍 Analysis Prompt Constructed');
 

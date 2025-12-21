@@ -11,6 +11,7 @@ export const PromptBuilder = {
         options: {
             useKaomoji: boolean;
             isSelfPost: boolean;
+            strategy?: string;
         } = { useKaomoji: false, isSelfPost: false }
     ): string {
         // 1. 定義風格策略 (Style Strategy Definitions)
@@ -66,6 +67,7 @@ CONTEXT:
 
 TASK:
 Write a reply in the "${styleStrategy.name}" style.
+${options.strategy ? `\n🔥 MANDATORY STRATEGY: ${options.strategy}\n` : ''}
 Constraint: ${taskConstraint}
 Keep it concise (under 100 words).
 Output only the reply text.`;

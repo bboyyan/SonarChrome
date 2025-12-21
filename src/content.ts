@@ -1198,7 +1198,7 @@ class ThreadsAIAssistant {
       // --- Step 1: Analyze ---
       this.showLoadingState('🧠 AI 正在分析情境...');
 
-      const postText = this.extractPostText(post);
+      const postText = this.extractFullContext(post);
       if (!postText) {
         this.hideLoadingState();
         this.showError('無法讀取貼文內容');
@@ -1230,9 +1230,11 @@ class ThreadsAIAssistant {
       // Parse analysis response
       const analysisText = analysisResponse.analysis || '';
       const styleMatch = analysisText.match(/STYLE:\s*(.+)/i);
+      const strategyMatch = analysisText.match(/STRATEGY:\s*(.+)/i);
       const reasonMatch = analysisText.match(/REASON:\s*(.+)/i);
 
       const styleName = styleMatch ? styleMatch[1].trim() : null;
+      const strategyText = strategyMatch ? strategyMatch[1].trim() : '';
       const reasonText = reasonMatch ? reasonMatch[1].trim() : '情境適配';
 
       // Find matching style from REPLY_STYLES
@@ -1244,13 +1246,13 @@ class ThreadsAIAssistant {
 
       // --- Show Analysis Result ---
       this.hideLoadingState();
-      this.showSuccessMessage(`✨ 風格：${matchedStyle.name}\n💬 理由：${reasonText}`);
+      this.showSuccessMessage(`✨ 風格：${matchedStyle.name}\n🎯 策略：${strategyText}\n💬 理由：${reasonText}`);
 
       // --- Step 2: Generate Reply ---
       // Wait 1.5s for user to read the analysis
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      this.generateReply(post, matchedStyle, false); // Use the matched style, not 'auto'
+      this.generateReply(post, matchedStyle, false, strategyText); // Pass strategy
     };
 
     headerContainer.appendChild(smartBtn);
@@ -1442,12 +1444,14 @@ class ThreadsAIAssistant {
     });
   }
 
-  private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false) {
+  /**
+   * Retrieves the full context text including Root Post (if any) and Target Post.
+   */
+  private extractFullContext(post: Element): string | null {
     // 1. Extract Target Text (The comment user clicked Reply on)
     let targetText = this.extractPostText(post);
     if (!targetText) {
-      this.showError('無法讀取貼文內容');
-      return;
+      return null;
     }
 
     // 2. Try to find "Root Context" (The main post this comment belongs to)
@@ -1456,12 +1460,7 @@ class ThreadsAIAssistant {
       let rootPost: Element | null = null;
 
       // Strategy A: Detail View (URL contains /post/ or /t/)
-      // In detail view, the first post in the main container is ALWAYS the root.
       if (location.pathname.includes('/post/') || location.pathname.includes('/t/')) {
-        // Locate the first pressable container in the main scroll area
-        // We can just query `[data-pressable-container="true"]` globally because the first one in DOM layout 
-        // inside the main feed area is the root.
-        // Adjust: Be precise to avoid picking up nav items. Scoped to `main` role if possible.
         const mainRole = document.querySelector('main');
         if (mainRole) {
           rootPost = mainRole.querySelector('[data-pressable-container="true"]');
@@ -1469,23 +1468,13 @@ class ThreadsAIAssistant {
       }
 
       // Strategy B: Feed View (Sibling Grouping)
-      // If we didn't find it (or not in detail view), look for the "First Sibling" in the current cluster.
       if (!rootPost) {
         let currentLevel = post.parentElement;
-        // Traverse up to 6 levels to find the cluster wrapper
-        // Threads DOM structure is deep. A thread unit usually groups the main post and replies.
         for (let i = 0; i < 6; i++) {
           if (!currentLevel || currentLevel.tagName === 'BODY' || currentLevel.tagName === 'MAIN') break;
-
-          // Look for all pressable containers (posts) in this level
-          // scope:scope is not needed, just querySelectorAll
           const candidates = currentLevel.querySelectorAll('[data-pressable-container="true"]');
-
-          // If we found multiple posts in this container, the first one is likely the Root Context.
           if (candidates.length > 1) {
             const first = candidates[0];
-            // Ensure the first one is visually before the current one (it acts as header)
-            // And ensure it's not the current post itself
             if (first !== post && first.compareDocumentPosition(post) & Node.DOCUMENT_POSITION_FOLLOWING) {
               rootPost = first;
               break;
@@ -1495,7 +1484,7 @@ class ThreadsAIAssistant {
         }
       }
 
-      // If we found a root post, and it IS NOT the current post (meaning current post is a reply)
+      // If we found a root post, and it IS NOT the current post
       if (rootPost && rootPost !== post) {
         const rootText = this.extractPostText(rootPost);
         if (rootText && rootText !== targetText) {
@@ -1506,14 +1495,23 @@ class ThreadsAIAssistant {
       console.warn('Failed to extract context, proceeding with target only', e);
     }
 
-    // 3. Construct Final Post Text for AI
+    // 3. Construct Final Post Text
     let finalPostText = targetText;
     if (contextText) {
-      // Structured format for PromptBuilder
       finalPostText = `【主文 Context (The Main Topic)】:\n${contextText}\n\n【回覆對象 Target (The Specific Comment)】:\n${targetText}`;
       console.log('🔗 Context Linked:', { context: contextText.substring(0, 20), target: targetText.substring(0, 20) });
     } else {
       console.log('🔗 No Context Linked (Replying to Root or Standalone)');
+    }
+
+    return finalPostText;
+  }
+
+  private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false) {
+    const finalPostText = this.extractFullContext(post);
+    if (!finalPostText) {
+      this.showError('無法讀取貼文內容');
+      return;
     }
 
 
@@ -1542,19 +1540,19 @@ class ThreadsAIAssistant {
     this.showLoadingState(loadingMessage, contextSnippet);
 
     try {
-      // Use Manual Host Mode Toggle
-      const isSelfPost = this.isHostMode;
+      this.showLoadingState('✨ AI 正在生成回覆...');
 
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
         data: {
           postText: finalPostText,
-          style: style.id,
-          prompt: style.prompt,
-          tone: this.selectedTone,
+          style: style,
+          strategy: strategy, // New field
+          tone: this.getSelectedTone(),
+          model: await StorageManager.getSelectedModel(),
           options: {
             useKaomoji: this.useKaomoji,
-            isSelfPost: isSelfPost
+            isSelfPost: this.isHost
           }
         }
       });
