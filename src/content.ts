@@ -1377,7 +1377,7 @@ Reason: [簡短說明選擇此風格的原因]
       `;
     document.body.appendChild(toast);
 
-    let html = `< div style = "display:flex; align-items:center; gap:8px;" > <span class="spinner" > </span> <span style="font-weight: 500;">${message}</span > </div>`;
+    let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span><span style="font-weight: 500;">${message}</span></div>`;
 
     if (contextSnippet) {
       // Truncate if too long (although caller should probably truncate)
@@ -1533,16 +1533,28 @@ Reason: [簡短說明選擇此風格的原因]
         let finalReply = response.reply;
         let analysisInfo: string | undefined = undefined;
 
-        // Parse <st_analysis>
-        const analysisMatch = finalReply.match(/<st_analysis>([\s\S]*?)<\/st_analysis>/);
+        // 1. Try to extract XML block (Handling potential markdown code blocks wrapping it)
+        const analysisRegex = /<st_analysis>([\s\S]*?)<\/st_analysis>/i;
+        const analysisMatch = finalReply.match(analysisRegex);
+
         if (analysisMatch) {
-          const content = analysisMatch[1];
+          const content = analysisMatch[1].trim();
+          // Remove the tag from the reply to be pasted
           finalReply = finalReply.replace(analysisMatch[0], '').trim();
-          const style = content.match(/Style:\s*(.*)/)?.[1] || '自動';
-          const reason = content.match(/Reason:\s*(.*)/)?.[1] || '';
-          if (style) {
-            analysisInfo = `👉 已選風格：${style}\n💡 理由：${reason}`;
-          }
+
+          // Clean up potential markdown marks leftover
+          finalReply = finalReply.replace(/^```html\s*/, '').replace(/^```xml\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+          const styleMatch = content.match(/Style:\s*([^\n]*)/i);
+          const reasonMatch = content.match(/Reason:\s*([^\n]*)/i);
+
+          const styleName = styleMatch ? styleMatch[1].trim() : '自動選擇';
+          const reasonText = reasonMatch ? reasonMatch[1].trim() : '無額外說明';
+
+          analysisInfo = `👉 已選風格：${styleName}\n💡 理由：${reasonText}`;
+        } else if (style.id === 'auto') {
+          // Fallback for Smart Mode
+          analysisInfo = `👉 已選風格：智能搭配 (自動)\n💡 理由：AI 自動分析情境`;
         }
 
         this.fillReplyInput(replyInput as HTMLInputElement, finalReply, analysisInfo);
