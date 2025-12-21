@@ -69,7 +69,7 @@ TASK:
 Write a reply in the "${styleStrategy.name}" style.
 ${options.strategy ? `\n🔥 MANDATORY STRATEGY: ${options.strategy}\n` : ''}
 Constraint: ${taskConstraint}
-Keep it concise (under 100 words).
+Keep it VERY concise (under 50 words, ideally 1-2 sentences).
 Output only the reply text.`;
     },
 
@@ -80,43 +80,43 @@ Output only the reply text.`;
         const strategies: Record<string, { name: string; definition: string }> = {
             'connection': {
                 name: "High Resonance",
-                definition: "Brief, relatable reaction. Show you 'get it'. Example: '真的... 看到那個直接滑掉 🫠'"
+                definition: "Brief, relatable reaction. Show you 'get it'. MAX 1-2 sentences. Example: '真的... 看到那個直接滑掉'"
             },
             'value': {
                 name: "Casual Insight",
-                definition: "Share experience casually. NO teaching. Example: '上次也遇到類似的，結果是 key 沒設好'"
+                definition: "Share experience casually. NO teaching. MAX 2 sentences. Example: '上次也遇到類似的，結果是 key 沒設好'"
             },
             'chill': {
                 name: "Chill / Circle Talk",
-                definition: "Low effort, maybe a bit self-deprecating or soft complaint. Example: '笑死 我上次也這樣' or '這種好東西怎麼不揪'"
+                definition: "Low effort, self-deprecating or soft complaint. MAX 1-2 sentences. Example: '笑死 我上次也這樣'"
             },
             'hype': {
                 name: "Pure Hype",
-                definition: "Genuine supportive reaction. Like a friend hyping you up. Example: '太強了吧 🔥'"
+                definition: "Genuine supportive reaction. Like a friend hyping you up. MAX 1 sentence. Example: '太強了吧'"
             },
             'spicy': {
                 name: "Spicy Take",
-                definition: "A bold, slightly contrarian or deep perspective. Sparks discussion."
+                definition: "A bold, slightly contrarian perspective. Sparks discussion. MAX 2 sentences."
             },
             'story': {
                 name: "Mini Story",
-                definition: "Share a VERY brief personal story/experience (< 2 sentences). Example: '之前做過類似的，結果 demo 炸掉...'"
+                definition: "Share a VERY brief personal story/experience. MUST be under 2 sentences. Example: '之前做過類似的，結果 demo 炸掉...'"
             },
             'question': {
                 name: "Curious Question",
-                definition: "Ask a genuine follow-up question. Make the author want to reply to YOU."
+                definition: "Ask a genuine follow-up question. MAX 1 question, no preamble. Just ask directly."
             },
             'flex': {
                 name: "Subtle Flex",
-                definition: "Mention related work/experience naturally, not bragging. Example: '我們上個月也做了類似的...'"
+                definition: "Mention related work/experience naturally. MAX 1-2 sentences. Example: '我們上個月也做了類似的...'"
             },
             'hook': {
                 name: "Cliffhanger Hook",
-                definition: "Say something intriguing but incomplete. Example: '這招我有個更狠的做法...'"
+                definition: "Say something intriguing but incomplete. MUST be 1 SHORT sentence only. Example: '這招我有個更狠的做法...'"
             },
             'collab': {
                 name: "Collab Hint",
-                definition: "Express interest in connecting or collaborating casually. Example: '這個想法不錯欸 有機會可以聊聊'"
+                definition: "Express interest in connecting. Keep it casual. MAX 1-2 sentences. Example: '這個想法不錯欸 有機會可以聊聊'"
             }
         };
 
