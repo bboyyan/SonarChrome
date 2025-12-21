@@ -1255,14 +1255,14 @@ Reason: [簡短說明選擇此風格的原因]
       const isSelected = this.selectedTone?.id === tone.id;
 
       toneChip.style.cssText = `
-      padding: 4px 10px;
-      border - radius: 99px;
-      font - size: 12px;
-      cursor: pointer;
-      border: 1px solid ${isSelected ? '#1877f2' : '#ddd'};
-      background: ${isSelected ? '#1877f2' : 'white'};
-      color: ${isSelected ? 'white' : '#1c1e21'};
-      transition: all 0.2s;
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 12px;
+        cursor: pointer;
+        border: 1px solid ${isSelected ? '#1877f2' : '#ddd'};
+        background: ${isSelected ? '#1877f2' : 'white'};
+        color: ${isSelected ? 'white' : '#1c1e21'};
+        transition: all 0.2s;
       `;
 
       toneChip.addEventListener('click', (e) => {
@@ -1297,11 +1297,11 @@ Reason: [簡短說明選擇此風格的原因]
     // 2. Reply Style Section
     const styleTitle = document.createElement('div');
     styleTitle.style.cssText = `
-      font - weight: 600;
-      font - size: 13px;
+      font-weight: 600;
+      font-size: 13px;
       color: #65676b;
-      margin - bottom: 8px;
-      `;
+      margin-bottom: 8px;
+    `;
     styleTitle.textContent = '回覆風格 (點擊生成)';
     selector.appendChild(styleTitle);
 
@@ -1318,19 +1318,19 @@ Reason: [簡短說明選擇此風格的原因]
     option.style.cssText = `
       padding: 12px 16px;
       cursor: pointer;
-      border - radius: 8px;
+      border-radius: 8px;
       margin: 2px 0;
-      transition: background - color 0.2s ease;
-      `;
+      transition: background-color 0.2s ease;
+    `;
 
     option.innerHTML = `
-        < div style = "font-weight: 500; font-size: 14px; color: #1c1e21; margin-bottom: 2px;" >
-          ${style.name}
+      <div style="font-weight: 500; font-size: 14px; color: #1c1e21; margin-bottom: 2px;">
+        ${style.name}
       </div>
-        < div style = "font-size: 12px; color: #65676b;" >
-          ${style.description}
+      <div style="font-size: 12px; color: #65676b;">
+        ${style.description}
       </div>
-        `;
+    `;
 
     option.addEventListener('mouseenter', () => {
       option.style.backgroundColor = '#f2f3f5';
