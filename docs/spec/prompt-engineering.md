@@ -181,43 +181,131 @@ AI 可能會把 Prompt 指令當成回覆內容輸出，例如：
 
 ---
 
-## 7. UI/UX 設計
+## 7. 個人風格 DNA (Personal Style DNA)
 
-### 7.1 載入提示
+### 7.1 功能概述
+允許用戶提供自己的寫作範例，讓 AI 模仿其個人風格。
+
+### 7.2 實作方式
+- **儲存位置**：`chrome.storage.local` 的 `CUSTOM_STYLE_EXAMPLES` 鍵
+- **UI 位置**：Options 頁面的「個人風格 DNA」區塊
+- **Prompt 注入**：
+  ```
+  PERSONAL STYLE DNA:
+  Below are examples of your natural writing style. Mimic the STYLE (sentence structure, length, punctuation, vibe), NOT the content.
+  
+  Examples:
+  ${customExamples}
+  ```
+
+### 7.3 使用建議
+- 提供 3-5 個真實的回覆範例
+- 範例應展現您獨特的語氣和節奏
+- AI 會學習風格特徵，而非複製內容
+
+---
+
+## 8. 視覺辨識支援 (Vision Support)
+
+### 8.1 功能概述
+支援分析貼文中的圖片，並將圖片內容整合至回覆生成。
+
+### 8.2 觸發方式
+- **UI 按鈕**：「👁️ 讀圖」切換按鈕（僅在貼文包含圖片時顯示）
+- **圖片提取**：最多抓取 2 張圖片（`img[src*="fbcdn"], img[src*="cdninstagram"]`）
+- **狀態提示**：載入訊息會顯示「👁️ 正在讀取圖片並以「XX」風格生成中...」
+
+### 8.3 模型相容性
+| 模型 ID | 支援視覺 | 備註 |
+| :--- | :---: | :--- |
+| `x-ai/grok-code-fast-1` | ❌ | 自動切換至 Gemini 2.5 Flash |
+| `google/gemini-2.5-flash` | ✅ | 主要視覺引擎 |
+| `anthropic/claude-sonnet-4.5` | ✅ | 高品質視覺理解 |
+| `openai/gpt-oss-120b` | ✅ | 多模態支援 |
+
+### 8.4 API 請求格式 (OpenRouter)
+```typescript
+{
+  model: "google/gemini-2.5-flash",
+  messages: [{
+    role: "user",
+    content: [
+      { type: "text", text: prompt },
+      { type: "image_url", image_url: { url: imageUrl1 } },
+      { type: "image_url", image_url: { url: imageUrl2 } }
+    ]
+  }]
+}
+```
+
+---
+
+## 9. 2025 年 AI 模型配置
+
+### 9.1 支援模型列表
+| 模型 ID | 顯示名稱 | 提供商 | 特色 | 視覺支援 |
+| :--- | :--- | :--- | :--- | :---: |
+| `x-ai/grok-code-fast-1` | Grok Code Fast 1 | OpenRouter | 極速文字生成 | ❌ |
+| `google/gemini-2.5-flash` | Gemini 2.5 Flash | OpenRouter | 平衡速度與品質 | ✅ |
+| `anthropic/claude-sonnet-4.5` | Claude Sonnet 4.5 | OpenRouter | 最高智能水準 | ✅ |
+| `openai/gpt-oss-120b` | GPT-OSS 120B | OpenRouter | 開源強大模型 | ✅ |
+
+### 9.2 預設模型
+- **預設選擇**：`x-ai/grok-code-fast-1`（速度優先）
+- **視覺備援**：當 Grok 遇到圖片時，自動切換至 `google/gemini-2.5-flash`
+
+### 9.3 API Key 配置
+- **統一入口**：所有 2025 模型透過 OpenRouter API Key
+- **儲存位置**：`chrome.storage.local` 的 `openrouterApiKey`
+- **設定頁面**：Options 頁面的「API 金鑰設定」區塊
+
+---
+
+## 10. UI/UX 設計
+
+### 10.1 載入提示
 ```
 ✨ 使用「[風格名稱]」風格生成中...
 [主文摘要前30字]...
 ```
 
-### 7.2 分析結果 Toast (底部中央)
+**視覺辨識模式**：
+```
+👁️ 正在讀取圖片並以「[風格名稱]」風格生成中...
+[主文摘要前30字]...
+```
+
+### 10.2 分析結果 Toast (底部中央)
 ```
 ✨ 風格：幽默吐槽
 🎯 策略：先同理再諷刺
 💬 理由：情境適配
 ```
 
-### 7.3 錯誤提示 (底部中央)
+### 10.3 錯誤提示 (底部中央)
 ```
 ❌ [錯誤訊息]
 ```
 
 ---
 
-## 8. 技術實作重點
+## 11. 技術實作重點
 
-### 8.1 檔案結構
+### 11.1 檔案結構
 - **`src/lib/prompt-builder.ts`**：Prompt 構建邏輯
 - **`src/lib/constants.ts`**：風格與語調定義
 - **`src/content.ts`**：UI 互動與上下文提取
 - **`src/background.ts`**：AI API 呼叫（分析 & 生成）
+- **`src/lib/providers/openrouter.ts`**：OpenRouter API 整合（含視覺支援）
 
-### 8.2 關鍵方法
+### 11.2 關鍵方法
 - `extractFullContext(post)`: 提取完整上下文
 - `handleAnalyzePost()`: 分析階段 API 呼叫
 - `handleGenerateReply()`: 生成階段 API 呼叫
 - `buildReplyPrompt()`: 動態構建 Prompt
+- `OpenRouterProvider.generateReply()`: 處理多模態請求
 
-### 8.3 訊息流程
+### 11.3 訊息流程
 ```
 [Smart Select 按鈕點擊]
   ↓
@@ -230,9 +318,20 @@ AI 可能會把 Prompt 指令當成回覆內容輸出，例如：
 [GENERATE_REPLY] → AI 生成 → 填入回覆框
 ```
 
+**視覺辨識流程**：
+```
+[👁️ 讀圖按鈕開啟]
+  ↓
+[提取圖片 URLs] → 最多 2 張
+  ↓
+[GENERATE_REPLY with images] → 多模態 API 請求
+  ↓
+[AI 分析圖片 + 文字] → 生成回覆
+```
+
 ---
 
-## 9. 測試檢查清單
+## 12. 測試檢查清單
 
 - [ ] 智能搭配能正確讀取主文與回覆對象
 - [ ] 分析 Toast 顯示完整資訊（風格/策略/理由）
@@ -242,16 +341,26 @@ AI 可能會把 Prompt 指令當成回覆內容輸出，例如：
 - [ ] 無 Prompt Leakage（不輸出指令內容）
 - [ ] Toast 位置正確（底部中央）
 - [ ] 錯誤處理正常（顯示錯誤訊息）
+- [ ] **視覺辨識**：「👁️ 讀圖」按鈕正確顯示/隱藏
+- [ ] **視覺辨識**：圖片成功傳送至 API
+- [ ] **視覺辨識**：AI 回覆包含圖片相關內容
+- [ ] **視覺辨識**：Grok 自動切換至 Gemini 2.5
+- [ ] **個人風格 DNA**：自訂範例正確儲存與載入
+- [ ] **個人風格 DNA**：AI 回覆展現個人風格特徵
 
 ---
 
-## 10. 已知限制與未來改進
+## 13. 已知限制與未來改進
 
 ### 已知限制
 - AI 可能不完全遵守長度限制（需持續調整 Prompt）
 - 上下文提取在某些特殊 DOM 結構下可能失效
+- 視覺辨識僅支援 HTTPS 圖片 URL
+- 圖片數量限制為 2 張（API 成本考量）
 
 ### 未來改進方向
 - 加入「回覆歷史記憶」功能
 - 支援多輪對話上下文
 - 加入「風格學習」功能（從用戶修改中學習）
+- 支援更多圖片格式與來源
+- 優化視覺辨識的 Prompt 策略
