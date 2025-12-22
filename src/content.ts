@@ -1,6 +1,7 @@
 import browser from "webextension-polyfill";
+import "./styles/sidebar.css";
 import { type LikeThreshold, DEFAULT_THRESHOLDS } from "./types";
-import { REPLY_STYLES, BRAND_TONES, STORAGE_KEYS } from './lib/constants';
+import { REPLY_STYLES, STORAGE_KEYS } from './lib/constants';
 import type { ReplyStyle, BrandTone } from './lib/types';
 
 class ThreadsHelper {
@@ -228,9 +229,10 @@ class ThreadsHelper {
     if (!hourlyGrowth && !isViralPrediction) return; // Don't show if no interesting data
 
     // Design System Configuration
+    // Design System Configuration
     let config = {
       icon: "📈",
-      gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9))", // Emerald
+      gradient: "#10b981", // Emerald
       text: "Growth",
       label: `每小時 +${hourlyGrowth} 讚`,
       glowColor: "rgba(16, 185, 129, 0.4)"
@@ -239,7 +241,7 @@ class ThreadsHelper {
     if (isViralPrediction) {
       config = {
         icon: "⚡",
-        gradient: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(59, 130, 246, 0.9))", // Violet -> Blue
+        gradient: "#8b5cf6", // Violet
         text: "Trending",
         label: "爆文預警：近期急速竄升",
         glowColor: "rgba(139, 92, 246, 0.5)"
@@ -247,7 +249,7 @@ class ThreadsHelper {
     } else if (typeof hourlyGrowth === 'number' && hourlyGrowth >= 100) {
       config = {
         icon: "🔥",
-        gradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(239, 68, 68, 0.9))", // Orange -> Red
+        gradient: "#ff5252", // Red
         text: "Hot",
         label: `火熱討論：每小時 +${hourlyGrowth} 讚`,
         glowColor: "rgba(245, 158, 11, 0.5)"
@@ -536,7 +538,7 @@ class ThreadsHelper {
           height: 64px;
           margin: 0 auto 16px;
           border-radius: 18px;
-          background: linear-gradient(135deg, #0ea5e9, #6366f1); /* Sky to Indigo */
+          background: #0095f6;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -548,17 +550,11 @@ class ThreadsHelper {
           font-size: 24px;
           font-weight: 800;
           margin: 0 0 8px;
-          background: linear-gradient(135deg, #0284c7, #4f46e5);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          color: #0095f6;
         }
 
         .__fb-dark-mode .sonar-modal-title {
-          background: linear-gradient(135deg, #38bdf8, #818cf8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          color: #38bdf8;
         }
 
         .sonar-modal-desc {
@@ -663,11 +659,11 @@ class ThreadsHelper {
             <!-- Hero -->
             <div style="text-align: center; margin-bottom: 32px;">
                 <div style="position: relative; width: 80px; height: 80px; margin: 0 auto 16px;">
-                    <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #38bdf8, #6366f1); filter: blur(20px); opacity: 0.3; border-radius: 24px;"></div>
+                    <div style="position: absolute; inset: 0; background: #e0f2fe; filter: blur(20px); opacity: 0.3; border-radius: 24px;"></div>
                     <img src="${browser.runtime.getURL('sonar-icon.png')}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); position: relative; z-index: 1;" alt="Sonar">
                 </div>
                 <h2 style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -0.5px;">
-                    Sonar<span style="background: linear-gradient(to right, #0ea5e9, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Agent</span>
+                    Sonar<span style="color: #0095f6;">Agent</span>
                 </h2>
                 <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; font-weight: 600; margin-top: 4px;">Command Center</p>
             </div>
@@ -689,6 +685,39 @@ class ThreadsHelper {
                  </div>
             </div>
             
+            <!-- Batch Mode Toggle -->
+            <div id="sonar-batch-toggle-row" style="
+                display: flex; 
+                align-items: center; 
+                padding: 12px; 
+                background: rgba(255,255,255,0.5); 
+                border-radius: 12px; 
+                margin-bottom: 24px;
+                cursor: pointer;
+                transition: background 0.2s;
+            ">
+                <div style="
+                    width: 40px; 
+                    height: 40px; 
+                    background: #e0f2fe; 
+                    border-radius: 10px; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    color: #0284c7; 
+                    font-size: 20px;
+                    margin-right: 12px;
+                ">📚</div>
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; font-weight: 700; color: #1e293b;">批次模式</div>
+                    <div style="font-size: 10px; color: #94a3b8;">多選留言並自動填入回覆</div>
+                </div>
+                <!-- Toggle Switch -->
+                 <div id="sonar-batch-toggle-switch" style="width: 44px; height: 24px; background: #cbd5e1; border-radius: 99px; position: relative; transition: background 0.2s;">
+                    <div style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></div>
+                 </div>
+            </div>
+
             <!-- Main Button -->
              <button class="settings-btn" style="
                 width: 100%;
@@ -723,6 +752,8 @@ class ThreadsHelper {
       </div>
 
     `;
+
+
 
     // Click Outside Close
     modal.addEventListener("click", (e) => {
@@ -787,7 +818,326 @@ class ThreadsAIAssistant {
   private useKaomoji: boolean = false;
   private isHostMode: boolean = false;
   private useVision: boolean = false; // Manual toggle for "Host Mode"
+
+  // Batch Mode State
+  private isBatchMode: boolean = false;
+  private selectedComments: Set<Element> = new Set();
+  private batchBar: HTMLElement | null = null;
   private localStorageKey = 'threads-ai-settings';
+
+  private openSidebar(post: Element) {
+    this.currentPost = post;
+    this.toggleSidebar(true);
+
+    // Update Context Text
+    const contextEl = this.sidebar?.querySelector('#sonar-context-text');
+    const contextArea = this.sidebar?.querySelector('#sonar-context-area') as HTMLElement;
+    if (contextEl && contextArea) {
+      const text = this.extractFullContext(post) || '';
+      contextEl.textContent = text.substring(0, 80) + (text.length > 80 ? '...' : '');
+      contextArea.style.display = 'block';
+    }
+
+    this.updateSidebarUI();
+  }
+
+  private renderSidebar() {
+    if (this.sidebar) return;
+
+    // Clean up existing DOM if any (prevents duplicates on re-injection)
+    const existing = document.getElementById('sonar-sidebar');
+    if (existing) existing.remove();
+
+    this.sidebar = document.createElement('div');
+    this.sidebar.id = 'sonar-sidebar';
+    this.sidebar.className = 'collapsed';
+    this.sidebar.innerHTML = `
+    <div id="sonar-sidebar-handle">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </div>
+    <div class="sonar-header">
+      <div class="sonar-logo">Sonar AI</div>
+
+    </div>
+    <div class="sonar-body">
+      <div id="sonar-context-area" class="sonar-context" style="display:none;">
+        <div class="sonar-context-label">當前文脈 (Active Context)</div>
+        <div id="sonar-context-text"></div>
+      </div>
+
+      <div class="sonar-section">
+        <div class="sonar-batch-row" id="sonar-sidebar-batch-toggle" style="cursor:pointer; padding:16px; display:flex; justify-content:space-between; align-items:center; border:none; background:transparent;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div>
+              <div style="font-weight:600; font-size:14px;">自動批次模式</div>
+              <div style="font-size:11px; color:#94a3b8;">Auto Batch Queue</div>
+            </div>
+          </div>
+          <div class="toggle-switch" id="sonar-sidebar-batch-switch" style="width:40px; height:22px; background:#e2e8f0; border-radius:99px; position:relative; transition:background 0.2s;">
+            <div style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:2px; left:2px; transition:0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.1);"></div>
+          </div>
+        </div>
+        
+        <!-- Preferences Section -->
+        <div style="padding: 0 16px 16px 16px; margin-top: -4px;">
+            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:12px; padding: 8px; border-radius: 8px; background: #f8fafc;">
+                <span style="font-size:13px; font-weight:600; color: #334155;">( ≧Д≦) 顏文字</span>
+                <input type="checkbox" id="sonar-opt-kaomoji" style="accent-color:#0095f6; transform: scale(1.2);">
+            </label>
+            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding: 8px; border-radius: 8px; background: #f8fafc;">
+                <span style="font-size:13px; font-weight:600; color: #334155;">我是樓主 (Host Mode)</span>
+                <input type="checkbox" id="sonar-opt-host" style="accent-color:#0095f6; transform: scale(1.2);">
+            </label>
+        </div>
+      </div>
+
+      <div id="sonar-tools-area" style="margin-top:24px;">
+        <div class="sonar-section-title">AI 工具箱 (AI Tools)</div>
+        <div class="sonar-grid" id="sonar-style-grid"></div>
+      </div>
+    </div>
+
+    <div class="sonar-footer">
+      <button id="sonar-sidebar-settings" class="sonar-btn">
+        設定與模型
+      </button>
+    </div>
+    `;
+
+    document.body.appendChild(this.sidebar);
+
+    // Bind Events
+    this.sidebar.querySelector('#sonar-sidebar-handle')?.addEventListener('click', () => this.toggleSidebar());
+
+
+    this.sidebar.querySelector('#sonar-sidebar-batch-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleBatchMode();
+      this.updateSidebarUI();
+    });
+
+    this.sidebar.querySelector('#sonar-sidebar-settings')?.addEventListener('click', () => {
+      browser.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+    });
+
+    // Option Toggles
+    const kaoToggle = this.sidebar.querySelector('#sonar-opt-kaomoji') as HTMLInputElement;
+    if (kaoToggle) {
+      kaoToggle.checked = this.useKaomoji;
+      kaoToggle.addEventListener('change', () => {
+        this.useKaomoji = kaoToggle.checked;
+        this.saveSettings();
+      });
+    }
+
+    const hostToggle = this.sidebar.querySelector('#sonar-opt-host') as HTMLInputElement;
+    if (hostToggle) {
+      hostToggle.checked = this.isHostMode;
+      hostToggle.addEventListener('change', () => {
+        this.isHostMode = hostToggle.checked;
+        // Host mode is transient usually, but strict users might want it saved? 
+        // For now, let's keep it transient or save it if requested. 
+        // The original logic didn't seem to save isHostMode, but let's stick to existing pattern.
+      });
+    }
+
+    this.renderSidebarStyles();
+    this.updateSidebarUI();
+  }
+
+  private toggleSidebar(forceOpen: boolean = false) {
+    if (!this.sidebar) this.renderSidebar();
+
+    if (forceOpen) {
+      this.isSidebarCollapsed = false;
+    } else {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    }
+
+    if (this.sidebar) {
+      if (this.isSidebarCollapsed) this.sidebar.classList.add('collapsed');
+      else this.sidebar.classList.remove('collapsed');
+    }
+  }
+
+  private updateSidebarUI() {
+    if (!this.sidebar) return;
+
+    // Update Batch Switch
+    const switchEl = this.sidebar.querySelector('#sonar-sidebar-batch-switch') as HTMLElement;
+    const knob = switchEl.querySelector('div') as HTMLElement;
+
+    if (this.isBatchMode) {
+      switchEl.style.background = '#0095f6';
+      knob.style.transform = 'translateX(18px)'; // Adjusted for 40px width
+    } else {
+      switchEl.style.background = '#e2e8f0';
+      knob.style.transform = 'translateX(0)';
+    }
+
+    // Update Tools Area
+    const toolsArea = this.sidebar.querySelector('#sonar-tools-area');
+    if (toolsArea) {
+      if (this.isBatchMode) {
+        toolsArea.innerHTML = `
+          <div class="sonar-section-title">批次佇列 (${this.batchQueue.length > 0 ? '執行中' : '待命'})</div>
+          <div style="margin-bottom:12px; display: flex; gap: 8px;">
+             <input type="number" id="batch-count-input" min="1" max="20" value="5" class="sonar-input" style="width: 80px; text-align: center;">
+             <div style="display:flex; flex-direction:column; justify-content:center;">
+                <span style="font-size:13px; font-weight:600;">處理數量</span>
+                <span style="font-size:11px; color:#94a3b8;">Max 20</span>
+             </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <input type="text" id="batch-fixed-input" placeholder="輸入固定回覆內容..." style="width:100%; padding:12px; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:#fff; color:#333; font-size:13px; outline:none; transition:border 0.2s;">
+            <div style="font-size:11px; color:#94a3b8; margin-top:4px;">* 將自動搜尋接下來的 N 則貼文進行回覆</div>
+          </div>
+          <div class="sonar-grid">
+            <button class="sonar-btn primary" id="batch-action-fixed" style="background:#0095f6; border-color:#0095f6; color:white;">填入固定內容</button>
+            <button class="sonar-btn" id="batch-action-random" style="border:1px solid #dbdbdb; color:#333;">AI 隨機風格</button>
+            <button class="sonar-btn" id="batch-action-cancel" style="grid-column: span 2; background:#f1f5f9; color:#333;">關閉批次模式</button>
+          </div>
+        `;
+
+        toolsArea.querySelector('#batch-action-fixed')?.addEventListener('click', () => {
+          const countInput = toolsArea.querySelector('#batch-count-input') as HTMLInputElement;
+          const count = parseInt(countInput.value, 10) || 5;
+          const val = (toolsArea.querySelector('#batch-fixed-input') as HTMLInputElement).value;
+          this.handleAutoBatch(count, 'fixed', val);
+        });
+        toolsArea.querySelector('#batch-action-random')?.addEventListener('click', () => {
+          const countInput = toolsArea.querySelector('#batch-count-input') as HTMLInputElement;
+          const count = parseInt(countInput.value, 10) || 5;
+          this.handleAutoBatch(count, 'random');
+        });
+        toolsArea.querySelector('#batch-action-cancel')?.addEventListener('click', () => {
+          this.toggleBatchMode();
+          this.updateSidebarUI();
+        });
+
+      } else {
+        // Normal Mode
+        toolsArea.innerHTML = `<div class="sonar-section-title">快速操作 (Quick Actions)</div><div class="sonar-grid" id="sonar-style-grid"></div>`;
+        this.renderSidebarStyles();
+      }
+    }
+  }
+
+  private renderSidebarStyles() {
+    const grid = this.sidebar?.querySelector('#sonar-style-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    // Smart Auto
+    const smartBtn = document.createElement('button');
+    smartBtn.className = 'sonar-btn';
+    smartBtn.style.background = '#0095f6';
+    smartBtn.style.border = 'none';
+    smartBtn.style.color = 'white';
+    smartBtn.textContent = '智能分析回覆';
+    smartBtn.onclick = () => {
+      if (this.currentPost) this.generateReply(this.currentPost, { id: 'auto', name: 'Auto', description: 'Auto', prompt: '' });
+      else this.showError('請先選擇貼文');
+    };
+    grid.appendChild(smartBtn);
+
+    REPLY_STYLES.forEach(style => {
+      if (style.id === 'auto') return;
+      const btn = document.createElement('button');
+      btn.className = 'sonar-btn';
+      btn.textContent = style.name;
+      btn.onclick = () => {
+        if (this.currentPost) {
+          this.generateReply(this.currentPost, style);
+        } else {
+          this.showError('請先選擇貼文');
+        }
+      };
+      grid.appendChild(btn);
+    });
+  }
+
+  private handleAutoBatch(count: number, mode: 'fixed' | 'random', fixedText: string = '') {
+    if (!this.currentPost) {
+      this.showLoadingState('Please select a starting post first (click AI icon on a post)', null);
+      setTimeout(() => this.hideLoadingState(), 2000);
+      return;
+    }
+
+    // Logic: Find siblings of currentPost or all posts below it?
+    // Threads structure is complex. Usually repeated structures in a list.
+    // We look for logic used in 'findPosts'.
+    // We want to find the Index of currentPost in the list of All Posts, then take next N.
+
+    const allPosts = this.findPosts();
+    const currentIndex = allPosts.indexOf(this.currentPost);
+
+    if (currentIndex === -1) {
+      this.showError('Current post context lost. Reselect.');
+      return;
+    }
+
+    // Select next N posts
+    // Filter those that already have a reply? (Hard to detect user reply without more DOM logic).
+    // For now, simple "Next N" regardless.
+    const targets = allPosts.slice(currentIndex + 1, currentIndex + 1 + count);
+
+    if (targets.length === 0) {
+      this.showError('No more posts below this one.');
+      return;
+    }
+
+    this.showLoadingState(`Batch Processing ${targets.length} items...`);
+
+    targets.forEach((post, i) => {
+      // Delay to prevent freezing?
+      setTimeout(() => {
+        this.processBatchItem(post, mode, fixedText);
+      }, i * 300);
+    });
+
+    setTimeout(() => {
+      this.hideLoadingState();
+      this.showSuccessMessage(`Filled ${targets.length} replies.`);
+    }, targets.length * 300 + 500);
+  }
+
+  private processBatchItem(post: Element, mode: 'fixed' | 'random', fixedText: string) {
+    if (!post) return;
+    post.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const replyBtn = post.querySelector('[aria-label*="Reply"], [aria-label*="回覆"], div[role="button"]:has(svg[aria-label="Reply"])') as HTMLElement;
+
+    if (replyBtn) {
+      replyBtn.click();
+
+      setTimeout(() => {
+        // Try to find the new modal textarea
+        const textarea = document.querySelector('div[role="dialog"] [contenteditable="true"]') as HTMLElement || document.querySelector('[contenteditable="true"]');
+
+        if (textarea) {
+          if (mode === 'fixed') {
+            // Simple fill for fixed text
+            textarea.innerText = fixedText;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          } else {
+            // Random AI Style
+            // Pick a random style that effectively varies the tone
+            const styles = REPLY_STYLES.filter(s => s.id !== 'auto');
+            const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+            this.generateReply(post, randomStyle);
+          }
+        }
+      }, 1500); // 1.5s delay for modal slide-in
+    }
+  }
+  private sidebar: HTMLElement | null = null;
+  private isSidebarCollapsed: boolean = true;
+  private currentPost: Element | null = null;
+  private batchQueue: Element[] = [];
+
 
   constructor() {
     this.init();
@@ -820,7 +1170,6 @@ class ThreadsAIAssistant {
   private saveSettings() {
     try {
       localStorage.setItem(this.localStorageKey, JSON.stringify({
-        // useEmoji removed
         useKaomoji: this.useKaomoji
       }));
     } catch (e) {
@@ -830,7 +1179,7 @@ class ThreadsAIAssistant {
 
   private injectButtons() {
     const posts = this.findPosts();
-    // console.log(`🔍 找到 ${posts.length} 個貼文`);
+    // console.log(`🔍 找到 ${ posts.length } 個貼文`);
     posts.forEach((post) => {
       this.addButtonToPost(post);
     });
@@ -938,20 +1287,20 @@ class ThreadsAIAssistant {
     const button = document.createElement('button');
     button.className = 'threads-ai-button';
     button.style.cssText = `
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border: none;
-      background: transparent;
-      border-radius: 50%;
-      cursor: pointer;
-      margin-left: 8px;
-      transition: all 0.2s ease;
-      font-size: 18px;
-      color: #65676b;
-    `;
+display: inline - flex;
+align - items: center;
+justify - content: center;
+width: 40px;
+height: 40px;
+border: none;
+background: transparent;
+border - radius: 50 %;
+cursor: pointer;
+margin - left: 8px;
+transition: all 0.2s ease;
+font - size: 18px;
+color: #65676b;
+`;
 
     button.innerHTML = '✨';
     button.title = 'AI 智慧回覆';
@@ -969,483 +1318,66 @@ class ThreadsAIAssistant {
     button.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.showStyleSelector(post, button);
+      this.openSidebar(post);
     });
 
     return button;
   }
 
-  private showStyleSelector(post: Element, button: HTMLElement) {
-    this.hideExistingSelectors();
-
-    const selector = this.createStyleSelector(post);
-
-    // Initial hidden state for calculation
-    selector.style.visibility = 'hidden';
-    selector.style.position = 'fixed';
-    selector.style.top = '0';
-    selector.style.left = '0';
-    // Add max-height/width constraints to prevent it from being huge
-    selector.style.maxHeight = '60vh';
-    selector.style.maxWidth = '90vw';
-    selector.style.overflowY = 'auto';
-
-    document.body.appendChild(selector);
-
-    const buttonRect = button.getBoundingClientRect();
-    const selectorRect = selector.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const padding = 16;
-
-    // Default: Below
-    let top = buttonRect.bottom + 8;
-    let left = buttonRect.left;
-
-    // 1. Vertical Logic
-    // If not enough space below
-    if (top + selectorRect.height > viewportHeight - padding) {
-      const spaceAbove = buttonRect.top - padding;
-      const spaceBelow = viewportHeight - top - padding;
-
-      // If fits above, go above
-      if (spaceAbove > selectorRect.height) {
-        top = buttonRect.top - selectorRect.height - 8;
-      } else {
-        // If neither fits perfectly, pick the larger side and cap the height
-        if (spaceAbove > spaceBelow) {
-          // Pin to top margin, set max-height to fit between top and button
-          top = padding; // actually logic: go as high as needed but max at padding
-          // BETTER SCRIPT: Position above button, but cap height
-          // Logic: "Above" means top = buttonRect.top - height - 8.
-          // If height is too big, we need to shrink it? 
-          // Let's just pin to top padding if huge.
-          // Or simply:
-          top = Math.max(padding, buttonRect.top - selectorRect.height - 8);
-          // Force max-height if needed? selector.style.maxHeight is already 60vh.
-          // If 60vh fits, great. If not, it will scroll.
-
-          // If current top + height > button top? No, logic is:
-          // We want to be above. 
-          // If we pin to padding, are we overlapping button?
-          // If padding + height > button.top, we overlap.
-
-          // Let's simplify:
-          // If fits above? yes -> go above.
-          // If not fits above (and not below)?
-          // Check which space is bigger.
-          // If space above is bigger:
-          //   top = padding;
-          //   maxHeight = spaceAbove;
-          // If space below is bigger:
-          //   top = buttonRect.bottom + 8;
-          //   maxHeight = spaceBelow;
-        } else {
-          // Below is bigger (but still not full fit?), pin to where it is.
-          // top is already buttonRect.bottom + 8
-          // We might need to restrict max-height to fit in viewport
-          // selector.style.maxHeight = `${spaceBelow}px`; // dynamic adjustment
-        }
-      }
-    }
-
-    // Re-check Vertical with simpler logic
-    // Calculate space below and above
-    const spaceBelow = viewportHeight - (buttonRect.bottom + 8) - padding;
-    const spaceAbove = buttonRect.top - padding - 8;
-
-    // Prefer below if it fits, or if it has more space than above
-    const fitsBelow = spaceBelow >= selectorRect.height;
-    const fitsAbove = spaceAbove >= selectorRect.height;
-
-    if (fitsBelow || spaceBelow >= spaceAbove) {
-      top = buttonRect.bottom + 8;
-      // Cap height if strictly needed?
-      if (!fitsBelow) {
-        selector.style.maxHeight = `${spaceBelow}px`;
-      }
-    } else {
-      // Go Above
-      top = buttonRect.top - selectorRect.height - 8;
-      if (!fitsAbove) {
-        // If doesn't fit above, pin to top padding and size down
-        top = padding;
-        selector.style.maxHeight = `${spaceAbove + 8}px`; // roughly available space
-      }
-    }
-
-    // 2. Horizontal Logic
-    if (left + selectorRect.width > viewportWidth - padding) {
-      left = viewportWidth - selectorRect.width - padding;
-    }
-    if (left < padding) left = padding;
-
-    // Apply Final
-    selector.style.top = `${top}px`;
-    selector.style.left = `${left}px`;
-    selector.style.visibility = 'visible';
-
-    // Ensure styles applied
-    selector.style.zIndex = '10000';
-
-    setTimeout(() => {
-      const handleClickOutside = (e: Event) => {
-        if (!selector.contains(e.target as Node) && !button.contains(e.target as Node)) {
-          selector.remove();
-          document.removeEventListener('click', handleClickOutside);
-        }
-      };
-      document.addEventListener('click', handleClickOutside);
-    }, 100);
-  }
-
-  private createStyleSelector(post: Element): HTMLElement {
-    const selector = document.createElement('div');
-    selector.className = 'threads-ai-selector';
-    selector.style.cssText = `
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      padding: 12px;
-      min-width: 340px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow-y: auto;
-      max-height: 480px;
-    `;
-
-
-
-    // --- Header Actions (Random, Kaomoji) ---
-    const headerContainer = document.createElement('div');
-    headerContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #f0f0f0;
-      gap: 8px;
-    `;
-
-    // Random Button
-    const randomBtn = document.createElement('button');
-    randomBtn.innerHTML = '🎲 隨機風格';
-    randomBtn.style.cssText = `
-      background: #f0f2f5;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      color: #1c1e21;
-      font-weight: 600;
-      white-space: nowrap;
-    `;
-    randomBtn.onclick = () => {
-      const randomStyle = REPLY_STYLES[Math.floor(Math.random() * REPLY_STYLES.length)];
-      // Pass 'true' to indicate this is a random selection, so we should show the style name
-      this.generateReply(post, randomStyle, true);
-      selector.remove();
-    };
-
-    // Toggles Container
-    const togglesGroup = document.createElement('div');
-    togglesGroup.style.display = 'flex';
-    togglesGroup.style.gap = '8px';
-
-    // Helper to create toggles
-    const createToggle = (label: string, initialState: boolean, onChange: (val: boolean) => void) => {
-      const labelEl = document.createElement('label');
-      labelEl.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            user-select: none;
-            color: #65676b;
-        `;
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = initialState;
-      input.onchange = (e) => {
-        const checked = (e.target as HTMLInputElement).checked;
-        onChange(checked);
-        this.saveSettings(); // Save immediately
-      };
-      labelEl.appendChild(input);
-      labelEl.appendChild(document.createTextNode(label));
-      return labelEl;
-    };
-
-    togglesGroup.appendChild(createToggle('(O_O)', this.useKaomoji, (v) => this.useKaomoji = v));
-    // Host Mode Toggle
-    togglesGroup.appendChild(createToggle('我是樓主', this.isHostMode, (v) => this.isHostMode = v));
-
-    // Vision Toggle (Only if images exist)
-    const images = post.querySelectorAll('img[src*="fbcdn"], img[src*="cdninstagram"]');
-    if (images.length > 0) {
-      togglesGroup.appendChild(createToggle('👁️ 讀圖', this.useVision, (v) => this.useVision = v));
-    }
-
-    // Smart Select Button
-    const smartBtn = document.createElement('button');
-    smartBtn.textContent = '🧠 智能搭配';
-    smartBtn.className = 'threads-ai-random-btn';
-    smartBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; // Elegant Purple-Blue
-    smartBtn.style.border = 'none';
-    smartBtn.style.color = 'white';
-    smartBtn.title = 'AI 自動分析情境並選擇適合語氣';
-
-    smartBtn.onclick = async (e) => {
-      e.stopPropagation();
-      this.hideExistingSelectors();
-
-      // --- Step 1: Analyze ---
-      this.showLoadingState('🧠 AI 正在分析情境...');
-
-      const postText = this.extractFullContext(post);
-      if (!postText) {
-        this.hideLoadingState();
-        this.showError('無法讀取貼文內容');
-        return;
-      }
-
-      const stylesList = REPLY_STYLES
-        .map(s => `- ${s.name}: ${s.description || ''}`)
-        .join('\n');
-
-      let analysisResponse;
-      try {
-        analysisResponse = await browser.runtime.sendMessage({
-          type: 'ANALYZE_POST',
-          data: { postText, stylesList }
-        });
-      } catch (error) {
-        this.hideLoadingState();
-        this.showError('分析失敗，請稍後再試');
-        return;
-      }
-
-      if (!analysisResponse || !analysisResponse.success) {
-        this.hideLoadingState();
-        this.showError(analysisResponse?.error || '分析失敗');
-        return;
-      }
-
-      // Parse analysis response
-      const analysisText = analysisResponse.analysis || '';
-      const styleMatch = analysisText.match(/STYLE:\s*(.+)/i);
-      const strategyMatch = analysisText.match(/STRATEGY:\s*(.+)/i);
-      const reasonMatch = analysisText.match(/REASON:\s*(.+)/i);
-
-      const styleName = styleMatch ? styleMatch[1].trim() : null;
-      const strategyText = strategyMatch ? strategyMatch[1].trim() : '';
-      const reasonText = reasonMatch ? reasonMatch[1].trim() : '情境適配';
-
-      // Find matching style from REPLY_STYLES
-      let matchedStyle = REPLY_STYLES.find(s => s.name === styleName);
-      if (!matchedStyle) {
-        // Fallback: random style
-        matchedStyle = REPLY_STYLES[Math.floor(Math.random() * REPLY_STYLES.length)];
-      }
-
-      // --- Show Analysis Result ---
-      this.hideLoadingState();
-      this.showSuccessMessage(`✨ 風格：${matchedStyle.name}\n🎯 策略：${strategyText}\n💬 理由：${reasonText}`);
-
-      // --- Step 2: Generate Reply ---
-      // Wait 1.5s for user to read the analysis
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      this.generateReply(post, matchedStyle, false, strategyText); // Pass strategy
-    };
-
-    headerContainer.appendChild(smartBtn);
-    headerContainer.appendChild(randomBtn);
-    headerContainer.appendChild(togglesGroup);
-    selector.appendChild(headerContainer);
-
-    // 1. Brand Tone Section
-    const toneTitle = document.createElement('div');
-    toneTitle.style.cssText = `
-      font - weight: 600;
-      font - size: 13px;
-      color: #65676b;
-      margin - bottom: 8px;
-      `;
-    toneTitle.textContent = '語調 (選填)';
-    selector.appendChild(toneTitle);
-
-    const toneContainer = document.createElement('div');
-    toneContainer.style.cssText = `
-      display: flex;
-      flex - wrap: wrap;
-      gap: 6px;
-      margin - bottom: 16px;
-      padding - bottom: 16px;
-      border - bottom: 1px solid #f0f0f0;
-      `;
-
-    BRAND_TONES.forEach(tone => {
-      const toneChip = document.createElement('div');
-      toneChip.textContent = tone.name;
-      const isSelected = this.selectedTone?.id === tone.id;
-
-      toneChip.style.cssText = `
-        padding: 4px 10px;
-        border-radius: 99px;
-        font-size: 12px;
-        cursor: pointer;
-        border: 1px solid ${isSelected ? '#1877f2' : '#ddd'};
-        background: ${isSelected ? '#1877f2' : 'white'};
-        color: ${isSelected ? 'white' : '#1c1e21'};
-        transition: all 0.2s;
-      `;
-
-      toneChip.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // Toggle selection
-        if (this.selectedTone?.id === tone.id) {
-          this.selectedTone = null;
-          toneChip.style.background = 'white';
-          toneChip.style.color = '#1c1e21';
-          toneChip.style.border = '1px solid #ddd';
-        } else {
-          // Deselect others
-          // (Simplification: just re-render or manually update styles via loops if needed. 
-          // Re-rendering selector might be cleaner but for now let's just update styles)
-          Array.from(toneContainer.children).forEach((child: any) => {
-            child.style.background = 'white';
-            child.style.color = '#1c1e21';
-            child.style.border = '1px solid #ddd';
-          });
-
-          this.selectedTone = tone;
-          toneChip.style.background = '#1877f2';
-          toneChip.style.color = 'white';
-          toneChip.style.border = '1px solid #1877f2';
-        }
-      });
-
-      toneContainer.appendChild(toneChip);
-    });
-    selector.appendChild(toneContainer);
-
-    // 2. Reply Style Section
-    const styleTitle = document.createElement('div');
-    styleTitle.style.cssText = `
-      font-weight: 600;
-      font-size: 13px;
-      color: #65676b;
-      margin-bottom: 8px;
-    `;
-    styleTitle.textContent = '回覆風格 (點擊生成)';
-    selector.appendChild(styleTitle);
-
-    REPLY_STYLES.forEach(style => {
-      const option = this.createStyleOption(style, post);
-      selector.appendChild(option);
-    });
-
-    return selector;
-  }
-
-  private createStyleOption(style: ReplyStyle, post: Element): HTMLElement {
-    const option = document.createElement('div');
-    option.style.cssText = `
-      padding: 12px 16px;
-      cursor: pointer;
-      border-radius: 8px;
-      margin: 2px 0;
-      transition: background-color 0.2s ease;
-    `;
-
-    option.innerHTML = `
-      <div style="font-weight: 500; font-size: 14px; color: #1c1e21; margin-bottom: 2px;">
-        ${style.name}
-      </div>
-      <div style="font-size: 12px; color: #65676b;">
-        ${style.description}
-      </div>
-    `;
-
-    option.addEventListener('mouseenter', () => {
-      option.style.backgroundColor = '#f2f3f5';
-    });
-
-    option.addEventListener('mouseleave', () => {
-      option.style.backgroundColor = 'transparent';
-    });
-
-    option.addEventListener('click', () => {
-      this.generateReply(post, style);
-      this.hideExistingSelectors();
-    });
-
-    return option;
-  }
-
   private showLoadingState(message: string = 'AI 正在思考中...', contextSnippet: string | null = null) {
-    // Fix Race Condition: Always remove existing toast to cancel any pending fade-out timers
     const existing = document.getElementById('threads-ai-toast');
     if (existing) existing.remove();
 
-    let toast = document.createElement('div');
+    const toast = document.createElement('div');
     toast.id = 'threads-ai-toast';
     toast.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1c1e21;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      font-size: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 6px;
-      z-index: 10001;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      max-width: 90vw;
-    `;
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1c1e21;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        z-index: 10001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        max-width: 90vw;
+      `;
     document.body.appendChild(toast);
 
     let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span><span style="font-weight: 500;">${message}</span></div>`;
-
     if (contextSnippet) {
-      // Truncate if too long (although caller should probably truncate)
       const safeSnippet = contextSnippet.length > 20 ? contextSnippet.substring(0, 20) + '...' : contextSnippet;
       html += `<div style="font-size: 12px; color: #b0b3b8; padding-left: 24px;">📄 已連結主文：「${safeSnippet}」</div>`;
     }
-
     toast.innerHTML = html;
 
-    // Add spinner style if needed
-    const style = document.createElement('style');
-    style.textContent = `
-      .spinner {
-        width: 14px;
-        height: 14px;
-        border: 2px solid white;
-        border-top: 2px solid transparent;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        flex-shrink: 0;
-      }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    `;
-    if (!document.head.querySelector('#threads-ai-spinner-style')) {
-      style.id = 'threads-ai-spinner-style';
+    const styleId = 'threads-ai-spinner-style';
+    if (!document.head.querySelector(`#${styleId}`)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+            .spinner {
+              width: 14px;
+              height: 14px;
+              border: 2px solid white;
+              border-top: 2px solid transparent;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+              flex-shrink: 0;
+            }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `;
       document.head.appendChild(style);
     }
 
-    // Show
     requestAnimationFrame(() => {
       if (toast) toast.style.opacity = '1';
     });
@@ -1514,7 +1446,7 @@ class ThreadsAIAssistant {
     return finalPostText;
   }
 
-  private async generateReply(post: Element, style: ReplyStyle, showStyleName: boolean = false, strategy: string = '') {
+  private async generateReply(post: Element, style: ReplyStyle, strategy: string = '') {
     const finalPostText = this.extractFullContext(post);
     if (!finalPostText) {
       this.showError('無法讀取貼文內容');
@@ -1552,14 +1484,65 @@ class ThreadsAIAssistant {
 
     // Extract a short snippet of the context to display
     const contextSnippet = finalPostText.replace(/\s+/g, ' ').substring(0, 30) + '...';
-    let loadingMessage = `✨ 使用「${style.name}」風格生成中...`;
 
-    // Add visual indicator for vision status
-    if (images.length > 0) {
-      loadingMessage = `👁️ 正在讀取圖片並以「${style.name}」風格生成中...`;
+    // --- SMART ANALYSIS ORCHESTRATION ---
+    if (style.id === 'auto') {
+      const contextSnippet = finalPostText.replace(/\s+/g, ' ').substring(0, 30) + '...';
+      this.showLoadingState('🔍 正在分析貼文情境與語意...', contextSnippet);
+
+      const stylesList = REPLY_STYLES
+        .filter(s => s.id !== 'auto')
+        .map(s => `- ${s.name}: ${s.description}`)
+        .join('\n');
+
+      try {
+        const analysisResult = await browser.runtime.sendMessage({
+          type: 'ANALYZE_POST',
+          data: {
+            postText: finalPostText,
+            stylesList: stylesList
+          }
+        });
+
+        if (analysisResult && analysisResult.success) {
+          const analysisText = analysisResult.analysis;
+          const getValue = (key: string) => {
+            const match = analysisText.match(new RegExp(`${key}:\\s*(.+)`, 'i'));
+            return match ? match[1].trim() : null;
+          };
+          const styleName = getValue('STYLE');
+          const strategyText = getValue('STRATEGY');
+          const reason = getValue('REASON');
+
+          const matched = REPLY_STYLES.find(s => s.name === styleName);
+          if (matched) {
+            style = matched; // Update style for generation!
+            strategy = strategyText || '';
+            this.showLoadingState(`🧠 策略：${style.name}`, `思路：${reason}`);
+            await new Promise(r => setTimeout(r, 1200));
+          } else {
+            this.showLoadingState('⚠️ 分析模糊，使用預設風格...');
+            style = REPLY_STYLES.find(s => s.id === 'connection')!;
+          }
+        } else {
+          console.warn('Analysis failed or returned empty');
+        }
+      } catch (e) {
+        console.warn('Analysis failed', e);
+      }
+    } else {
+      // Normal Simulation for specific styles
+      this.showLoadingState(`🧠 正在構思「${style.name}」風格回覆...`, contextSnippet);
+      await new Promise(r => setTimeout(r, 600));
     }
 
-    this.showLoadingState(loadingMessage, contextSnippet);
+    // Vision Check (Visual Analysis Toast)
+    if (images.length > 0) {
+      this.showLoadingState('👁️ 正在視覺辨識圖片內容...', contextSnippet);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    this.showLoadingState(`✨ 正在生成內容...`, contextSnippet);
 
     try {
       const storageResult = await browser.storage.local.get(STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES);
@@ -1569,7 +1552,7 @@ class ThreadsAIAssistant {
         type: 'GENERATE_REPLY',
         data: {
           postText: finalPostText,
-          style: style,
+          style: style.id, // Fix: Pass ID string
           strategy: strategy,
           tone: this.selectedTone,
           customExamples: customExamples,
@@ -1684,7 +1667,209 @@ class ThreadsAIAssistant {
         return true;
       });
 
-    return texts.join(' ').slice(0, 1000);
+    return texts.join('\n\n').trim();
+  }
+
+  // --- Batch Mode Implementation ---
+
+  private toggleBatchMode() {
+    this.isBatchMode = !this.isBatchMode;
+
+    if (this.isBatchMode) {
+      this.renderBatchActionBar();
+      this.injectBatchCheckboxes();
+      // Start a faster interval to keep injecting checkboxes as user scrolls
+      if (!this.batchObserverInterval) {
+        this.batchObserverInterval = window.setInterval(() => this.injectBatchCheckboxes(), 1000);
+      }
+    } else {
+      // Cleanup
+      this.selectedComments.clear();
+      if (this.batchBar) {
+        this.batchBar.remove();
+        this.batchBar = null;
+      }
+      if (this.batchObserverInterval) {
+        clearInterval(this.batchObserverInterval);
+        this.batchObserverInterval = null;
+      }
+      // Remove all checkboxes
+      document.querySelectorAll('.sonar-batch-checkbox').forEach(el => el.remove());
+    }
+  }
+
+  private batchObserverInterval: number | null = null;
+
+  private injectBatchCheckboxes() {
+    if (!this.isBatchMode) return;
+
+    // Select targets: Use the reply div as a reference
+    // Standard reply button selector
+    const replySelectors = [
+      'div[role="button"][aria-label="回覆"]',
+      'div[role="button"][aria-label="Reply"]',
+      'svg[aria-label="回覆"]',
+      'svg[aria-label="Reply"]'
+    ];
+
+    // Find all potential comment containers
+    // Strategy: Find reply buttons, then inject checkbox next to them if not present
+    for (const selector of replySelectors) {
+      const buttons = document.querySelectorAll(selector);
+      buttons.forEach(btn => {
+        // Find a stable container to inject into. usually the parent or grandparent.
+        // We want it visible next to the reply icon.
+        const clickable = btn.closest('[role="button"]') || btn.parentElement;
+
+        if (clickable && clickable instanceof HTMLElement) {
+          // Check if already injected
+          const parent = clickable.parentElement;
+          if (parent && !parent.querySelector('.sonar-batch-checkbox')) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'sonar-batch-checkbox';
+
+            // Identify the "post" container associated with this button
+            // usually traverse up to find 'data-pressable-container' or similar
+            // or just store the 'clickable' as the target to open context from.
+            const postContainer = clickable.closest('[data-pressable-container="true"]') || clickable.closest('div[style*="border-bottom"]');
+
+            checkbox.onclick = (e) => {
+              e.stopPropagation(); // Prevent opening reply modal
+              if (checkbox.checked) {
+                if (postContainer) this.selectedComments.add(postContainer);
+              } else {
+                if (postContainer) this.selectedComments.delete(postContainer);
+              }
+              this.updateBatchActionBar();
+            };
+
+            // Inject before the reply button container
+            parent.prepend(checkbox);
+            // Apply some flex style to parent if needed to align
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'center';
+          }
+        }
+      });
+    }
+  }
+
+  private renderBatchActionBar() {
+    if (this.batchBar) return;
+
+    this.batchBar = document.createElement('div');
+    this.batchBar.className = 'sonar-batch-bar';
+    this.batchBar.innerHTML = `
+          <span class="sonar-batch-count">已選 0 則</span>
+          <input type="text" class="fixed-input" placeholder="輸入固定回覆內容..." id="sonar-batch-fixed-input">
+          <button class="sonar-batch-btn-fixed" id="sonar-batch-btn-fixed">⚡️ 填入固定內容</button>
+          <button class="sonar-batch-btn-random" id="sonar-batch-btn-random">🎲 隨機 AI 生成</button>
+          <button class="sonar-batch-btn-cancel" id="sonar-batch-btn-cancel">取消</button>
+      `;
+
+    document.body.appendChild(this.batchBar);
+
+    // Bind Events
+    this.batchBar.querySelector('#sonar-batch-btn-fixed')?.addEventListener('click', () => {
+      const input = this.batchBar?.querySelector('#sonar-batch-fixed-input') as HTMLInputElement;
+      if (input && input.value) {
+        this.handleBatchFill('fixed', input.value);
+      } else {
+        this.showError('請輸入固定內容');
+      }
+    });
+
+    this.batchBar.querySelector('#sonar-batch-btn-random')?.addEventListener('click', () => {
+      this.handleBatchFill('random');
+    });
+
+    this.batchBar.querySelector('#sonar-batch-btn-cancel')?.addEventListener('click', () => {
+      this.toggleBatchMode(); // Toggle off
+    });
+  }
+
+  private updateBatchActionBar() {
+    if (!this.batchBar) return;
+    const countSpan = this.batchBar.querySelector('.sonar-batch-count');
+    if (countSpan) countSpan.textContent = `已選 ${this.selectedComments.size} 則`;
+  }
+
+  private async handleBatchFill(mode: 'fixed' | 'random', fixedText: string = '') {
+    if (this.selectedComments.size === 0) {
+      this.showError('請先勾選留言');
+      return;
+    }
+
+    this.showLoadingState(`正在批次處理 ${this.selectedComments.size} 則留言...`);
+
+    const targets = Array.from(this.selectedComments);
+    let successCount = 0;
+
+    // Process in parallel for speed (since we are just filling text)
+    const tasks = targets.map(async (post) => {
+      try {
+        // 1. Ensure input is open
+        let input = await this.findReplyInput(post);
+        if (!input) {
+          await this.openReplyModal(post);
+          // Small wait for UI
+          await new Promise(r => setTimeout(r, 500));
+          input = await this.findReplyInput(post);
+        }
+
+        if (!input) return; // Skip if failed to open
+
+        let replyText = fixedText;
+
+        if (mode === 'random') {
+          // Generate AI content
+          const styles = REPLY_STYLES.filter(s => s.id !== 'auto' && s.id !== 'lust'); // Exclude auto/lust
+          const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+          const context = this.extractFullContext(post);
+
+          // Reuse generate logic logic but direct call
+          // We can use runtime message directly
+          // Batch mode - skip custom examples for simplicity
+
+          const response = await browser.runtime.sendMessage({
+            type: 'GENERATE_REPLY',
+            data: {
+              postText: context,
+              style: randomStyle,
+              strategy: 'Batch Random Reply',
+              tone: 'friendly',
+              images: [], // Batch ignore images for speed? Or check? Let's ignore for speed.
+              options: { isSelfPost: this.isHostMode }
+            }
+          });
+
+          if (response && response.success) {
+            replyText = response.reply;
+            // Clean up meta
+            replyText = replyText.replace(/STYLE:.*$/im, '').replace(/REASON:.*$/im, '').trim();
+          } else {
+            replyText = '(AI 生成失敗)';
+          }
+        }
+
+        // Fill input
+        this.fillReplyInput(input as HTMLInputElement, replyText, undefined);
+        successCount++;
+
+      } catch (e) {
+        console.error('Batch error for item:', e);
+      }
+    });
+
+    await Promise.all(tasks);
+
+    this.hideLoadingState();
+    this.showSuccessMessage(`已完成！成功填入 ${successCount} 則留言。\n請手動檢查並發送此批留言。`);
+
+    // Optional: Clear selection after done?
+    // this.selectedComments.clear();
+    // this.updateBatchActionBar();
   }
 
   private async findReplyInput(post: Element): Promise<Element | null> {
@@ -1894,10 +2079,7 @@ class ThreadsAIAssistant {
     });
   }
 
-  private hideExistingSelectors() {
-    const existing = document.querySelectorAll('.threads-ai-selector');
-    existing.forEach(el => el.remove());
-  }
+  // hideExistingSelectors removed (unused)
 
   private startObserver() {
     this.observer = new MutationObserver((mutations) => {
@@ -1931,17 +2113,7 @@ class ThreadsAIAssistant {
 
 
   // Helper to extract author from specific post
-  private getPostAuthor(post: Element): string | null {
-    // The author link is usually at the top of the post.
-    // It typically has style "font-weight: 600" or is the first link with /@username
-    // To be safer, we look for the link that is inside the header part (usually first flex row)
-    // A simple heuristic: The first link starting with /@ inside the post container is 99% the author.
-    const authorLink = post.querySelector('a[href^="/@"][role="link"]');
-    if (authorLink) {
-      return authorLink.getAttribute('href')?.replace('/@', '').replace(/\/$/, '') || null;
-    }
-    return null;
-  }
+  // getPostAuthor removed (unused)
 }
 
 // 全域實例引用
