@@ -12,6 +12,7 @@ export const PromptBuilder = {
             useKaomoji: boolean;
             isSelfPost: boolean;
             strategy?: string;
+            customExamples?: string;
         } = { useKaomoji: false, isSelfPost: false }
     ): string {
         // 1. 定義風格策略 (Style Strategy Definitions)
@@ -37,7 +38,18 @@ export const PromptBuilder = {
             visualRules += "- NO Japanese kaomoji.\n";
         }
 
-        // 4. 組合 System Prompt
+        // 4. Personal Style DNA (Style Cloning)
+        let personalStyleRule = "";
+        if (options.customExamples && options.customExamples.trim()) {
+            personalStyleRule = `
+5. **PERSONAL STYLE DNA (MIMIC THIS EXACTLY)**:
+   You MUST copy the sentence structure, length, punctuation, and "vibe" of these examples:
+   ${options.customExamples.trim()}
+   (Ignore the content of examples, just copy the STYLE)
+`;
+        }
+
+        // 5. 組合 System Prompt
         return `You are a savvy, genuine Threads user in Taiwan. NOT an AI assistant.
 Your goal is to write replies that blend in perfectly with the "Threads vibe" (脆).
 
@@ -59,6 +71,7 @@ CRITICAL STYLE RULES (Must Follow):
 4. **Content Strategy**:
    - Focus on **Emotional Resonance** (Vibing) over "Value Adding".
    - Don't try to "network" aggressively. Just hang out.
+   ${personalStyleRule}
 
 CONTEXT:
 - Original Post: "${postContent}"
@@ -124,6 +137,10 @@ REPLY:`;
             'collab': {
                 name: "Collab Hint",
                 definition: "Express interest in connecting. Keep it casual. MAX 1-2 sentences. Example: '這個想法不錯欸 有機會可以聊聊'"
+            },
+            'lust': {
+                name: "Profile Lure (Curiosity Gap)",
+                definition: "Create a curiosity gap. Mention a resource, story, or detail that is ONLY available on your profile/pinned post. MAX 1-2 SHORT sentences. Example: '這件事其實有個關鍵細節，字數不夠寫不下，我置頂文有完整復盤...'"
             }
         };
 

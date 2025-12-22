@@ -34,28 +34,18 @@
             id: "x-ai/grok-code-fast-1",
             name: "Grok Code Fast 1",
             provider: "OpenRouter",
-            badge: "Default",
+            badge: "Fastest",
             badgeColor: "bg-teal-100 text-teal-800",
             description:
-                "Optimized for coding and logical tasks. Fastest response.",
+                "Optimized for coding and logical tasks. Rank #1 Speed.",
         },
         {
-            id: "google/gemini-3-flash",
-            name: "Google Gemini 3 Flash",
+            id: "google/gemini-2.5-flash",
+            name: "Gemini 2.5 Flash",
             provider: "OpenRouter",
             badge: "New",
             badgeColor: "bg-green-100 text-green-800",
-            description:
-                "Google's latest flash model. Extremely fast and capable.",
-        },
-        {
-            id: "openai/gpt-5.2",
-            name: "OpenAI GPT-5.2",
-            provider: "OpenRouter",
-            badge: "Premium",
-            badgeColor: "bg-purple-100 text-purple-800",
-            description:
-                "Next-gen reasoning and creative writing capabilities.",
+            description: "Google's next-gen flash model. 440B tokens context.",
         },
         {
             id: "anthropic/claude-sonnet-4.5",
@@ -63,7 +53,16 @@
             provider: "OpenRouter",
             badge: "SOTA",
             badgeColor: "bg-amber-100 text-amber-800",
-            description: "Anthropic's most intelligent model to date.",
+            description:
+                "Anthropic's most intelligent model. Unmatched nuance.",
+        },
+        {
+            id: "openai/gpt-oss-120b",
+            name: "GPT-OSS 120B",
+            provider: "OpenRouter",
+            badge: "Open",
+            badgeColor: "bg-purple-100 text-purple-800",
+            description: "OpenAI's powerful open-source model.",
         },
     ];
 
@@ -89,6 +88,10 @@
     let editForm = { name: "", description: "", prompt: "" };
     let brandToneEditForm = { name: "", description: "", prompt: "" };
 
+    // Style Cloning State
+    let customStyleExamples = "";
+    let examplesSaving = false;
+
     // --- Lifecycle ---
     onMount(async () => {
         await loadApiKeys();
@@ -96,7 +99,34 @@
         await loadShowViralUI();
         await loadStyles();
         await loadBrandTones();
+        await loadCustomStyleExamples();
     });
+
+    async function loadCustomStyleExamples() {
+        try {
+            const result = await browser.storage.local.get(
+                STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES,
+            );
+            customStyleExamples =
+                result[STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES] || "";
+        } catch (error) {
+            console.error("Failed to load custom style examples:", error);
+        }
+    }
+
+    async function saveCustomStyleExamples() {
+        examplesSaving = true;
+        try {
+            await browser.storage.local.set({
+                [STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES]:
+                    customStyleExamples.trim(),
+            });
+            showMessage("風格 DNA 已儲存！", "success");
+        } catch (error) {
+            showMessage("儲存失敗", "error");
+        }
+        examplesSaving = false;
+    }
 
     // --- Loaders ---
     async function loadApiKeys() {
@@ -755,6 +785,40 @@
                                     存取，只需設定此 Key。
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Personal Style DNA -->
+                <section
+                    class="bg-white rounded-3xl shadow-sm border border-surface-200 overflow-hidden"
+                >
+                    <div
+                        class="p-8 border-b border-surface-100 bg-surface-50/50"
+                    >
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            🧬 個人風格 DNA (Style Cloning)
+                        </h2>
+                        <p class="text-slate-500 mt-1">
+                            教 AI 學會您的說話方式。請貼上 3-5
+                            則您過去滿意的回覆範例。
+                        </p>
+                    </div>
+                    <div class="p-8 space-y-4">
+                        <textarea
+                            bind:value={customStyleExamples}
+                            rows="6"
+                            class="w-full rounded-xl border-surface-300 focus:ring-primary-500 focus:border-primary-500 text-sm p-4 font-mono leading-relaxed"
+                            placeholder="- 範例 1：笑死 這個真的超有感 🫠&#10;- 範例 2：確實... 上次去的時候也是這樣&#10;- 範例 3：沒事啦 下次會更好 加油 🔥"
+                        ></textarea>
+                        <div class="flex justify-end">
+                            <button
+                                on:click={saveCustomStyleExamples}
+                                disabled={examplesSaving}
+                                class="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                            >
+                                {examplesSaving ? "儲存中..." : "儲存 DNA"}
+                            </button>
                         </div>
                     </div>
                 </section>

@@ -2,8 +2,9 @@ import { AIModelProvider, type AIModelConfig, type GenerateReplyRequest, type Ge
 
 export class OpenRouterProvider extends AIModelProvider {
     readonly config: AIModelConfig;
+    private overrideModelId?: string;
 
-    constructor(modelId: string = 'google/gemini-2.0-flash-exp:free', name: string = 'OpenRouter (Gemini 2.0 Flash)') {
+    constructor(modelId: string = 'google/gemini-2.0-flash-exp:free', name: string = 'OpenRouter (Gemini 2.0 Flash)', overrideModelId?: string) {
         super();
         this.config = {
             id: modelId,
@@ -13,6 +14,7 @@ export class OpenRouterProvider extends AIModelProvider {
             isFree: modelId.includes(':free'),
             requiresApiKey: true
         };
+        this.overrideModelId = overrideModelId;
     }
 
     private readonly API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -30,11 +32,16 @@ export class OpenRouterProvider extends AIModelProvider {
                     'X-Title': 'Threads Viral Detector'
                 },
                 body: JSON.stringify({
-                    model: this.config.id,
+                    model: this.overrideModelId || this.config.id,
                     messages: [
                         {
                             role: 'user',
-                            content: prompt
+                            content: request.images && request.images.length > 0
+                                ? [
+                                    { type: 'text', text: prompt },
+                                    ...request.images.map(img => ({ type: 'image_url', image_url: { url: img } }))
+                                ]
+                                : prompt
                         }
                     ]
                 })
@@ -44,7 +51,7 @@ export class OpenRouterProvider extends AIModelProvider {
                 const errorData = await response.json().catch(() => ({}));
                 console.error('OpenRouter API error:', response.status, errorData);
 
-                let errorMessage = `API 請求失敗 (${response.status})`;
+                let errorMessage = `API 請求失敗(${response.status})`;
                 if (response.status === 401) errorMessage = 'API Key 無效';
                 if (response.status === 402) errorMessage = '餘額不足';
                 if (errorData.error?.message) errorMessage += `: ${errorData.error.message}`;

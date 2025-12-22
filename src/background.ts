@@ -25,19 +25,28 @@ class BackgroundService {
   }
 
   private initializeProviders() {
+    this.providers.clear();
+
     // 2025 Model Initialization via OpenRouter
     const grokProvider = new OpenRouterProvider('x-ai/grok-code-fast-1', 'Grok Code Fast 1');
-    const geminiProvider = new OpenRouterProvider('google/gemini-3-flash', 'Google Gemini 3 Flash');
-    const openaiProvider = new OpenRouterProvider('openai/gpt-5.2', 'OpenAI GPT-5.2');
+    const geminiProvider = new OpenRouterProvider('google/gemini-2.5-flash', 'Gemini 2.5 Flash');
+    const openaiProvider = new OpenRouterProvider('openai/gpt-oss-120b', 'GPT-OSS 120B');
     const claudeProvider = new OpenRouterProvider('anthropic/claude-sonnet-4.5', 'Claude Sonnet 4.5');
 
-    // Register Providers
-    this.providers.set(grokProvider.config.id, grokProvider);
-    this.providers.set(geminiProvider.config.id, geminiProvider);
-    this.providers.set(openaiProvider.config.id, openaiProvider);
-    this.providers.set(claudeProvider.config.id, claudeProvider);
+    // Register Providers ensuring exact ID matches
+    this.providers.set('x-ai/grok-code-fast-1', grokProvider);
+    this.providers.set('google/gemini-2.5-flash', geminiProvider);
+    this.providers.set('openai/gpt-oss-120b', openaiProvider);
+    this.providers.set('anthropic/claude-sonnet-4.5', claudeProvider);
 
-    console.log('🤖 AI 模型提供者已更新 (2025):', Array.from(this.providers.keys()));
+    console.log('🤖 AI Providers Initialized:', Array.from(this.providers.keys()));
+  }
+
+  private ensureProviders() {
+    if (this.providers.size === 0) {
+      console.warn('⚠️ Providers map empty, re-initializing...');
+      this.initializeProviders();
+    }
   }
 
   public async handleGenerateReply(
@@ -47,34 +56,59 @@ class BackgroundService {
       prompt: string;
       model?: string;
       tone?: any;
+      strategy?: string;
+      customExamples?: string;
+      images?: string[];
       options?: { useKaomoji?: boolean; isSelfPost?: boolean };
     }
   ): Promise<any> {
     try {
+      this.ensureProviders();
+
       // 使用指定的模型，如果沒有指定則默認使用 Gemini
       let modelId = data.model;
       if (!modelId) {
         modelId = await StorageManager.getSelectedModel();
       }
 
-      const provider = this.providers.get(modelId);
+      let targetModelId = modelId;
 
-      if (!provider) {
-        console.error('❌ 未找到模型提供者:', modelId);
-        return {
-          success: false,
-          error: `不支持的 AI 模型: ${modelId}`,
-          debugInfo: `可用模型: ${Array.from(this.providers.keys()).join(', ')}`
-        };
+      // Vision Support Logic for Non-Vision Models (Grok Fallback)
+      if (modelId === 'x-ai/grok-code-fast-1' && data.images && data.images.length > 0) {
+        console.log(`[Vision] Grok does not support vision. Switching to Gemini 2.5 Flash.`);
+        targetModelId = 'google/gemini-2.5-flash';
       }
 
-      console.log('🤖 使用 AI 模型:', provider.config.name);
+      const provider = this.providers.get(targetModelId);
+      var activeProvider = provider;
 
-      // 獲取對應的 API Key
-      const apiKey = await this.getApiKeyForModel(modelId);
+      if (!activeProvider) {
+        console.error('❌ 未找到模型提供者:', targetModelId, 'Available:', Array.from(this.providers.keys()));
+        // Fallback to Grok if specific target not found, or any first available
+        const fallback = this.providers.get('x-ai/grok-code-fast-1') || this.providers.values().next().value;
+        if (fallback) {
+          console.warn('⚠️ Falling back to default provider:', fallback.config.id);
+          activeProvider = fallback;
+        } else {
+          return {
+            success: false,
+            error: `不支持的 AI 模型 (ID: ${targetModelId})`,
+            debugInfo: `Available: ${Array.from(this.providers.keys()).join(', ')}`
+          };
+        }
+      }
+
+      console.log('🤖 使用 AI 模型:', activeProvider.config.name);
+
+      // 獲取對應支出的 API Key (使用原始 modelId 來查找 Key，或者 targetModelId?)
+      // Should use targetModelId's key if we switched providers?
+      // Actually usually OpenRouter key covers all.
+      // But getApiKeyForModel might check specific legacy keys.
+      // Let's use targetModelId for key lookup to be safe.
+      const apiKey = await this.getApiKeyForModel(activeProvider.config.id);
 
       if (!apiKey) {
-        const modelName = provider.config.name;
+        const modelName = activeProvider.config.name;
         return {
           success: false,
           error: `請先設定 ${modelName} 的 API Key`,
@@ -90,22 +124,24 @@ class BackgroundService {
         {
           useKaomoji: data.options?.useKaomoji || false,
           isSelfPost: data.options?.isSelfPost || false,
-          strategy: data.strategy || undefined
+          strategy: data.strategy || undefined,
+          customExamples: data.customExamples || undefined
         }
       );
 
       console.log('📝 Prompt Constructed:', finalPrompt.substring(0, 100) + '...');
 
       // 使用提供者生成回覆
-      const result = await provider.generateReply({
+      const result = await activeProvider.generateReply({
         // postText is included in stylePrompt by PromptBuilder
         stylePrompt: finalPrompt,
         postText: "",
-        apiKey: apiKey
+        apiKey: apiKey,
+        images: data.images
       });
 
       if (result.success) {
-        console.log('✅ 回覆生成成功，模型:', provider.config.name);
+        console.log('✅ 回覆生成成功，模型:', activeProvider.config.name);
 
         // **Control Token & Hallucination Cleaning**
         let rawReply = result.reply || '';
@@ -211,6 +247,8 @@ class BackgroundService {
    */
   async handleAnalyzePost(data: { postText: string; stylesList: string; model?: string }): Promise<any> {
     try {
+      this.ensureProviders();
+
       let modelId = data.model;
       if (!modelId) {
         modelId = await StorageManager.getSelectedModel();
@@ -218,7 +256,8 @@ class BackgroundService {
       const provider = this.providers.get(modelId);
 
       if (!provider) {
-        return { success: false, error: `不支持的 AI 模型: ${modelId}` };
+        console.error('❌ (Analyze) 未找到模型提供者:', modelId);
+        return { success: false, error: `不支持的 AI 模型: ${modelId} (Analyze)` };
       }
 
       const apiKey = await this.getApiKeyForModel(modelId);

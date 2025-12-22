@@ -60,6 +60,12 @@ export const REPLY_STYLES: ReplyStyle[] = [
         name: '隨性邀約',
         description: '拋出合作橄欖枝',
         prompt: 'Collab Hint'
+    },
+    {
+        id: 'lust',
+        name: '引流鉤子',
+        description: '製造好奇缺口，引導看主頁',
+        prompt: 'Profile Lure'
     }
 ];
 
@@ -119,5 +125,6 @@ export const STORAGE_KEYS = {
     MODIFIED_DEFAULT_BRAND_TONES: 'modifiedDefaultBrandTones',
     HIDDEN_BRAND_TONES: 'hiddenBrandTones',
     SELECTED_MODEL: 'selectedModel', // Add this for model selection
-    SHOW_VIRAL_UI: 'showViralUI'
+    SHOW_VIRAL_UI: 'showViralUI',
+    CUSTOM_STYLE_EXAMPLES: 'customStyleExamples'
 } as const;

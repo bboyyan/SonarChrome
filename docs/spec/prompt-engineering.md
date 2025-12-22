@@ -108,6 +108,7 @@ CRITICAL STYLE RULES (Must Follow):
 4. **Content Strategy**:
    - Focus on **Emotional Resonance** (Vibing) over "Value Adding".
    - Don't try to "network" aggressively. Just hang out.
+   ${personalStyleRule}
 
 CONTEXT:
 - Original Post: "${postContent}"
@@ -145,6 +146,7 @@ REPLY:`;
 | **flex** | **微炫耀** | 低調展示實力 | MAX 1-2 句 |
 | **hook** | **埋鉤子** | 話只說一半，引發好奇 | MUST 1 短句 |
 | **collab** | **隨性邀約** | 拋出合作橄欖枝 | MAX 1-2 句 |
+| **lust** | **引流鉤子** | 製造好奇缺口引導看主頁 | MAX 1-2 句 |
 
 **全局長度限制**：50 字以內，理想 1-2 句
 

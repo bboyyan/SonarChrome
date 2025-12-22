@@ -785,7 +785,8 @@ class ThreadsAIAssistant {
   private isInjected = false;
   private selectedTone: BrandTone | null = null;
   private useKaomoji: boolean = false;
-  private isHostMode: boolean = false; // Manual toggle for "Host Mode"
+  private isHostMode: boolean = false;
+  private useVision: boolean = false; // Manual toggle for "Host Mode"
   private localStorageKey = 'threads-ai-settings';
 
   constructor() {
@@ -1182,6 +1183,12 @@ class ThreadsAIAssistant {
     // Host Mode Toggle
     togglesGroup.appendChild(createToggle('我是樓主', this.isHostMode, (v) => this.isHostMode = v));
 
+    // Vision Toggle (Only if images exist)
+    const images = post.querySelectorAll('img[src*="fbcdn"], img[src*="cdninstagram"]');
+    if (images.length > 0) {
+      togglesGroup.appendChild(createToggle('👁️ 讀圖', this.useVision, (v) => this.useVision = v));
+    }
+
     // Smart Select Button
     const smartBtn = document.createElement('button');
     smartBtn.textContent = '🧠 智能搭配';
@@ -1531,12 +1538,32 @@ class ThreadsAIAssistant {
       return;
     }
 
+    // Capture images if Vision is enabled
+    let images: string[] = [];
+    if (this.useVision) {
+      const imgElements = post.querySelectorAll('img[src*="fbcdn"], img[src*="cdninstagram"]');
+      // Take up to 2 images
+      imgElements.forEach((img, index) => {
+        if (index < 2 && img instanceof HTMLImageElement && img.src) {
+          images.push(img.src);
+        }
+      });
+    }
+
     // Extract a short snippet of the context to display
     const contextSnippet = finalPostText.replace(/\s+/g, ' ').substring(0, 30) + '...';
-    const loadingMessage = `✨ 使用「${style.name}」風格生成中...`;
+    let loadingMessage = `✨ 使用「${style.name}」風格生成中...`;
+
+    // Add visual indicator for vision status
+    if (images.length > 0) {
+      loadingMessage = `👁️ 正在讀取圖片並以「${style.name}」風格生成中...`;
+    }
+
     this.showLoadingState(loadingMessage, contextSnippet);
 
     try {
+      const storageResult = await browser.storage.local.get(STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES);
+      const customExamples = storageResult[STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES];
 
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
@@ -1545,6 +1572,8 @@ class ThreadsAIAssistant {
           style: style,
           strategy: strategy,
           tone: this.selectedTone,
+          customExamples: customExamples,
+          images: images,
           options: {
             useKaomoji: this.useKaomoji,
             isSelfPost: this.isHostMode

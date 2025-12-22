@@ -13,6 +13,7 @@ export interface GenerateReplyRequest {
     postText: string;
     stylePrompt: string;
     apiKey: string;
+    images?: string[];
 }
 
 export interface GenerateReplyResponse {
