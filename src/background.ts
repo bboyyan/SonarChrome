@@ -74,8 +74,9 @@ class BackgroundService {
       let targetModelId = modelId;
 
       // Vision Support Logic for Non-Vision Models (Grok Fallback)
-      if (modelId === 'x-ai/grok-code-fast-1' && data.images && data.images.length > 0) {
-        console.log(`[Vision] Grok does not support vision. Switching to Gemini 2.5 Flash.`);
+      // Fallback for both old and new Grok fast models if images are present
+      if ((modelId === 'x-ai/grok-code-fast-1' || modelId === 'x-ai/grok-4.1-fast') && data.images && data.images.length > 0) {
+        console.log(`[Vision] ${modelId} does not support vision. Switching to Gemini 2.5 Flash.`);
         targetModelId = 'google/gemini-2.5-flash';
       }
 
@@ -307,6 +308,101 @@ REASON: [選擇此風格的簡短理由，10字以內]
       return { success: false, error: '分析貼文時發生錯誤' };
     }
   }
+
+  /**
+   * V2.2 Merged Handler (Single Call)
+  */
+  async handleMergedSmartAuto(
+    data: {
+      postText: string;
+      stylesList: string;
+      model?: string;
+      tone?: any;
+      options?: {
+        useKaomoji?: boolean;
+        isSelfPost?: boolean;
+        length?: 'short' | 'medium' | 'long';
+      };
+    }
+  ): Promise<any> {
+    try {
+      this.ensureProviders();
+
+      let modelId = data.model;
+      if (!modelId) {
+        modelId = await StorageManager.getSelectedModel();
+      }
+      const provider = this.providers.get(modelId);
+
+      if (!provider) {
+        return { success: false, error: `Unsupport Model: ${modelId}` };
+      }
+
+      const apiKey = await this.getApiKeyForModel(modelId);
+      if (!apiKey) {
+        return { success: false, error: `Missing API Key for ${provider.config.name}` };
+      }
+
+      // Build V2.2 Prompt
+      const mergedPrompt = PromptBuilder.buildMergedPrompt(
+        data.postText,
+        data.stylesList,
+        data.tone || null,
+        {
+          useKaomoji: data.options?.useKaomoji || false,
+          length: data.options?.length || 'short'
+        }
+      );
+
+      console.log('🚀 [Merged] Prompt Constructed (~600 tokens)');
+      console.time('⏱️ [Background] MERGED_SMART_AUTO - API');
+
+      const result = await provider.generateReply({
+        stylePrompt: mergedPrompt,
+        postText: "",
+        apiKey: apiKey
+      });
+
+      console.timeEnd('⏱️ [Background] MERGED_SMART_AUTO - API');
+
+      if (result.success) {
+        const rawText = result.reply || '';
+
+        // XML Parsing Logic
+        const analysisMatch = rawText.match(/<analysis>([\s\S]*?)<\/analysis>/i);
+        let style = 'auto';
+        let reason = 'AI Generated';
+        let reply = rawText;
+
+        if (analysisMatch) {
+          const block = analysisMatch[1];
+          style = block.match(/STYLE:\s*(.*)/i)?.[1]?.trim() || 'auto';
+          reason = block.match(/REASON:\s*(.*)/i)?.[1]?.trim() || '';
+
+          // Remove analysis block from reply
+          reply = rawText.replace(/<analysis>[\s\S]*?<\/analysis>/i, '').trim();
+        } else {
+          console.warn('⚠️ [Merged] XML Parsing Failed, falling back to raw text');
+        }
+
+        // Cleanup
+        reply = reply.replace(/^REPLY:\s*/i, '').trim();
+        reply = reply.replace(/[\u0400-\u04FF\u0600-\u06FF]+/g, ''); // Remove Hallucinated scripts
+
+        return {
+          success: true,
+          meta: { style, reason },
+          reply
+        };
+      } else {
+        return { success: false, error: result.error };
+      }
+
+    } catch (error) {
+      console.error('❌ Merged Auto Error:', error);
+      return { success: false, error: '智能分析發生錯誤' };
+    }
+  }
 }
 
 const backgroundService = new BackgroundService();
@@ -335,6 +431,14 @@ browser.runtime.onMessage.addListener((request: any, _sender, _sendResponse) => 
 
   if (request.type === 'ANALYZE_POST') {
     return backgroundService.handleAnalyzePost(request.data);
+  }
+
+  if (request.type === 'MERGED_SMART_AUTO') {
+    return backgroundService.handleMergedSmartAuto(request.data);
+  }
+
+  if (request.type === 'PING') {
+    return Promise.resolve({ type: 'PONG' });
   }
 
   return undefined;

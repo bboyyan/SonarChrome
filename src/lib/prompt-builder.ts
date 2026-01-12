@@ -159,5 +159,69 @@ REPLY:`;
             name: "Friendly Echo",
             definition: "A friendly, relevant reply."
         };
+    },
+
+    /**
+     * V2.2 Merged Prompt (Combined Analysis + Generation)
+     * Optmized for single-call performance and consistent styling.
+     */
+    buildMergedPrompt(
+        postContent: string,
+        stylesList: string,
+        tone: BrandTone | null = null,
+        options: {
+            useKaomoji: boolean;
+            length?: 'short' | 'medium' | 'long';
+        } = { useKaomoji: false, length: 'short' }
+    ): string {
+        // Rules
+        let visualRules = "- STRICTLY NO EMOJIS (🚫). Use text only.";
+        if (options.useKaomoji) {
+            visualRules = "- **MUST use Japanese kaomoji** (like (´・ω・`), (≧∇≦)/) naturally.";
+        } else {
+            visualRules = "- NO Japanese kaomoji.";
+        }
+
+        // Length Rules
+        let lengthRule = "5. **Length**: 1-2 sentences max.";
+        if (options.length === 'medium') {
+            lengthRule = "5. **Length**: 2-4 sentences. Moderate detail.";
+        } else if (options.length === 'long') {
+            lengthRule = "5. **Length**: 4-8 sentences. Detailed and descriptive.";
+        }
+
+        const toneDesc = tone ? `${tone.name}: ${tone.description}` : "Casual, genuine Threads user (脆友)";
+
+        return `
+You are a savvy, genuine Threads user in Taiwan.
+Mission: Read the post, pick a style, and write a matching reply.
+
+### DEFINITIONS
+${stylesList}
+
+### RULES
+1. **Persona**: ${toneDesc}
+2. **Tone**: Natural, smooth, daily conversation. Avoid robotic transitions.
+3. **Anti-AI**: NO "完全同意", "關於這點". NO formal structure. NO forced slang (like constant "笑死" or "確實").
+4. **Format**: ${visualRules}
+${lengthRule}
+
+### FORMAT DEMO (Strictly Follow Structure)
+Input: "午餐吃什麼好猶豫"
+Output:
+<analysis>
+STYLE: question
+REASON: 對方在尋求建議
+</analysis>
+附近那間拉麵店你吃過了嗎？
+
+⚠️ NOTE: The above is for XML structure reference ONLY. 
+Do NOT copy the content or tone. Your reply MUST be unique and directly address the post below.
+
+### TASK
+Post: "${postContent}"
+
+Response:
+`;
     }
 };

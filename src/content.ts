@@ -818,12 +818,15 @@ class ThreadsAIAssistant {
   private useKaomoji: boolean = false;
   private isHostMode: boolean = false;
   private useVision: boolean = false; // Manual toggle for "Host Mode"
+  private replyLength: 'short' | 'medium' | 'long' = 'short';
 
   // Batch Mode State
   private isBatchMode: boolean = false;
   private selectedComments: Set<Element> = new Set();
   private batchBar: HTMLElement | null = null;
   private localStorageKey = 'threads-ai-settings';
+
+
 
   private openSidebar(post: Element) {
     this.currentPost = post;
@@ -883,6 +886,14 @@ class ThreadsAIAssistant {
         <!-- Preferences Section -->
         <div style="padding: 0 16px 16px 16px; margin-top: -4px;">
             <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:12px; padding: 8px; border-radius: 8px; background: #f8fafc;">
+                <span style="font-size:13px; font-weight:600; color: #334155;">回覆長度</span>
+                <select id="sonar-opt-length" style="border:1px solid #cbd5e1; border-radius:4px; padding:2px 4px; font-size:12px; background:white; color:#334155; height: 26px;">
+                  <option value="short">短 (1-2句)</option>
+                  <option value="medium">中 (2-4句)</option>
+                  <option value="long">長 (4-8句)</option>
+                </select>
+            </label>
+            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:12px; padding: 8px; border-radius: 8px; background: #f8fafc;">
                 <span style="font-size:13px; font-weight:600; color: #334155;">( ≧Д≦) 顏文字</span>
                 <input type="checkbox" id="sonar-opt-kaomoji" style="accent-color:#0095f6; transform: scale(1.2);">
             </label>
@@ -928,6 +939,15 @@ class ThreadsAIAssistant {
       kaoToggle.checked = this.useKaomoji;
       kaoToggle.addEventListener('change', () => {
         this.useKaomoji = kaoToggle.checked;
+        this.saveSettings();
+      });
+    }
+
+    const lengthSelect = this.sidebar.querySelector('#sonar-opt-length') as HTMLSelectElement;
+    if (lengthSelect) {
+      lengthSelect.value = this.replyLength;
+      lengthSelect.addEventListener('change', () => {
+        this.replyLength = lengthSelect.value as any;
         this.saveSettings();
       });
     }
@@ -1142,6 +1162,12 @@ class ThreadsAIAssistant {
   constructor() {
     this.init();
     console.log('🤖 Threads AI Assistant 已載入');
+
+    // V2.2 Optimization: Service Worker Heartbeat
+    // Keeps the background script alive to prevent cold start latency
+    setInterval(() => {
+      browser.runtime.sendMessage({ type: 'PING' }).catch(() => { });
+    }, 20000);
   }
 
   private init() {
@@ -1161,6 +1187,7 @@ class ThreadsAIAssistant {
         const settings = JSON.parse(stored);
         // this.useEmoji removed
         this.useKaomoji = settings.useKaomoji ?? false;
+        this.replyLength = settings.replyLength ?? 'short';
       }
     } catch (e) {
       console.error('Failed to load local settings', e);
@@ -1170,7 +1197,8 @@ class ThreadsAIAssistant {
   private saveSettings() {
     try {
       localStorage.setItem(this.localStorageKey, JSON.stringify({
-        useKaomoji: this.useKaomoji
+        useKaomoji: this.useKaomoji,
+        replyLength: this.replyLength
       }));
     } catch (e) {
       console.error('Failed to save settings', e);
@@ -1688,70 +1716,59 @@ color: #65676b;
       // 1. Get Styles List
       const stylesList = REPLY_STYLES.filter(s => s.id !== 'auto').map(s => s.name).join(', ');
 
-      // 2. Call Analyze
-      console.time('⏱️ [SmartAuto] 2. ANALYZE_POST API');
+      // 2. Call Merged API (Single Shot)
+      console.time('⏱️ [SmartAuto] 2. MERGED_SMART_AUTO API');
       const response = await browser.runtime.sendMessage({
-        type: 'ANALYZE_POST',
-        data: { postText: finalPostText, stylesList }
+        type: 'MERGED_SMART_AUTO',
+        data: {
+          postText: finalPostText,
+          stylesList,
+          options: {
+            useKaomoji: this.useKaomoji,
+            isSelfPost: this.isHostMode,
+            length: this.replyLength
+          }
+        }
       });
-      console.timeEnd('⏱️ [SmartAuto] 2. ANALYZE_POST API');
+      console.timeEnd('⏱️ [SmartAuto] 2. MERGED_SMART_AUTO API');
 
       if (!response || !response.success) {
         throw new Error(response?.error || '分析失敗');
       }
 
-      // 3. Parse Result
-      const analysis = response.analysis || '';
-      // Use non-greedy matching across multiple lines if needed, but standard format is line-based.
-      // We'll use a safer approach: split by specific keys.
+      // 3. Process Result
+      const { meta, reply } = response;
+      const { style, reason } = meta;
 
-      const styleMatch = analysis.match(/STYLE:\s*(.+?)(?=\nSTRATEGY:|\nREASON:|$)/i);
-      const strategyMatch = analysis.match(/STRATEGY:\s*(.+?)(?=\nREASON:|$)/i);
-      const reasonMatch = analysis.match(/REASON:\s*(.+?)(?=$)/i);
+      // Map Style Name/ID back to Object for display
+      const targetStyle = REPLY_STYLES.find(s => s.id === style || s.name === style)
+        || { name: style, id: 'dynamic' };
 
-      const chosenStyleName = styleMatch ? styleMatch[1].trim() : 'Casual Insight'; // Fallback
-      const strategy = strategyMatch ? strategyMatch[1].trim() : '直接回應';
-      const reason = reasonMatch ? reasonMatch[1].trim() : '符合上下文語氣';
-
-      // map Name Back to ID (Matching by Chinese Name now)
-      let targetStyle: ReplyStyle | undefined;
-
-      // Check for Custom Style
-      if (chosenStyleName.startsWith('Custom:')) {
-        const customName = chosenStyleName.replace('Custom:', '').trim();
-        targetStyle = {
-          id: 'dynamic',
-          name: customName,
-          description: 'AI 自動生成的客製化風格',
-          prompt: 'Dynamic Style' // Placeholder, won't be used directly by PromptBuilder for dynamic
-        };
-      } else {
-        targetStyle = REPLY_STYLES.find(s => s.name === chosenStyleName)
-          || REPLY_STYLES.find(s => chosenStyleName.includes(s.name))
-          || REPLY_STYLES.find(s => s.id !== 'auto'); // Fallback
-      }
-
-      // Clean up reason text (remove potential "REASON:" prefix included by loose regex)
-      const cleanReason = reason.replace(/^REASON[:：]\s*/i, '').trim();
-
-      // 4. Show Analysis Toast (Persistent)
-      // Format:
-      // ✨ 風格：[Style Name]
-      // 🎯 策略：[Strategy]
-      // 💬 理由：[Reason]
-      const analysisToast = this.showSuccessMessage(`✨ 風格：${targetStyle?.name || chosenStyleName}\n🎯 策略：${strategy}\n💬 理由：${cleanReason}`, 0); // 0 = Persistent
+      // 4. Show Toast
+      const analysisToast = this.showSuccessMessage(`✨ 風格：${targetStyle.name}\n💬 理由：${reason}`, 0);
       this.activeSmartToasts.push(analysisToast);
 
-      // 5. Generate Content immediately (user sees toast while generating)
-      if (targetStyle) {
-        // await generation so we can control the final cleanup
-        console.time('⏱️ [SmartAuto] 3. generateReply (含 GENERATE_REPLY API)');
-        await this.generateReply(post, targetStyle, strategy, true); // true = isSmartAutoMode
-        console.timeEnd('⏱️ [SmartAuto] 3. generateReply (含 GENERATE_REPLY API)');
+      // 5. Fill Input
+      console.time('⏱️ [SmartAuto] 3. Find & Fill Input');
+      let replyInput = await this.findReplyInput(post);
+
+      if (!replyInput) {
+        const opened = await this.openReplyModal(post);
+        if (opened) {
+          replyInput = await this.findReplyInput(post);
+        }
       }
+
+      if (replyInput) {
+        this.fillReplyInput(replyInput as HTMLInputElement, reply, undefined);
+      } else {
+        this.showError('找不到回覆輸入框');
+      }
+      console.timeEnd('⏱️ [SmartAuto] 3. Find & Fill Input');
+
       console.timeEnd('⏱️ [SmartAuto] 總耗時');
 
-      // 6. Unified Cleanup after 10 seconds
+      // 6. Cleanup
       setTimeout(() => {
         this.activeSmartToasts.forEach(t => this.removeToast(t));
         this.activeSmartToasts = [];
@@ -1760,6 +1777,7 @@ color: #65676b;
     } catch (e: any) {
       console.error('Smart Auto Error:', e);
       this.showError(e.message);
+    } finally {
       this.hideLoadingState();
     }
   }
