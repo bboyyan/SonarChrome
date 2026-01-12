@@ -26,10 +26,10 @@ export class StorageManager {
     static async getSelectedModel(): Promise<string> {
         try {
             const result = await browser.storage.local.get(STORAGE_KEYS.SELECTED_MODEL);
-            return result[STORAGE_KEYS.SELECTED_MODEL] || 'x-ai/grok-code-fast-1';
+            return result[STORAGE_KEYS.SELECTED_MODEL] || 'x-ai/grok-4.1-fast';
         } catch (error) {
             console.error('Failed to get selected model:', error);
-            return 'x-ai/grok-code-fast-1';
+            return 'x-ai/grok-4.1-fast';
         }
     }
 

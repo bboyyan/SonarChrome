@@ -1672,9 +1672,13 @@ color: #65676b;
   }
 
   private async handleSmartAuto(post: Element) {
+    console.time('⏱️ [SmartAuto] 總耗時');
+    console.time('⏱️ [SmartAuto] 1. extractFullContext');
     const finalPostText = this.extractFullContext(post);
+    console.timeEnd('⏱️ [SmartAuto] 1. extractFullContext');
     if (!finalPostText) {
       this.showError('無法讀取貼文內容');
+      console.timeEnd('⏱️ [SmartAuto] 總耗時');
       return;
     }
 
@@ -1685,10 +1689,12 @@ color: #65676b;
       const stylesList = REPLY_STYLES.filter(s => s.id !== 'auto').map(s => s.name).join(', ');
 
       // 2. Call Analyze
+      console.time('⏱️ [SmartAuto] 2. ANALYZE_POST API');
       const response = await browser.runtime.sendMessage({
         type: 'ANALYZE_POST',
         data: { postText: finalPostText, stylesList }
       });
+      console.timeEnd('⏱️ [SmartAuto] 2. ANALYZE_POST API');
 
       if (!response || !response.success) {
         throw new Error(response?.error || '分析失敗');
@@ -1739,8 +1745,11 @@ color: #65676b;
       // 5. Generate Content immediately (user sees toast while generating)
       if (targetStyle) {
         // await generation so we can control the final cleanup
+        console.time('⏱️ [SmartAuto] 3. generateReply (含 GENERATE_REPLY API)');
         await this.generateReply(post, targetStyle, strategy, true); // true = isSmartAutoMode
+        console.timeEnd('⏱️ [SmartAuto] 3. generateReply (含 GENERATE_REPLY API)');
       }
+      console.timeEnd('⏱️ [SmartAuto] 總耗時');
 
       // 6. Unified Cleanup after 10 seconds
       setTimeout(() => {
@@ -1765,15 +1774,19 @@ color: #65676b;
     }
 
 
+    console.time('⏱️ [generateReply] A. findReplyInput (第一次)');
     let replyInput = await this.findReplyInput(post);
+    console.timeEnd('⏱️ [generateReply] A. findReplyInput (第一次)');
 
     // Auto-open Reply Modal if not found
     if (!replyInput) {
+      console.time('⏱️ [generateReply] B. openReplyModal + findReplyInput');
       const opened = await this.openReplyModal(post);
       if (opened) {
         // Wait for animation and focus
         replyInput = await this.findReplyInput(post);
       }
+      console.timeEnd('⏱️ [generateReply] B. openReplyModal + findReplyInput');
     }
 
     if (!replyInput) {
@@ -1865,6 +1878,7 @@ color: #65676b;
       const storageResult = await browser.storage.local.get(STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES);
       const customExamples = storageResult[STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES];
 
+      console.time('⏱️ [generateReply] C. GENERATE_REPLY API');
       const response = await browser.runtime.sendMessage({
         type: 'GENERATE_REPLY',
         data: {
@@ -1881,6 +1895,7 @@ color: #65676b;
           }
         }
       });
+      console.timeEnd('⏱️ [generateReply] C. GENERATE_REPLY API');
 
       if (response && response.success) {
         let finalReply = response.reply;

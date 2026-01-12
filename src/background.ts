@@ -28,13 +28,13 @@ class BackgroundService {
     this.providers.clear();
 
     // 2025 Model Initialization via OpenRouter
-    const grokProvider = new OpenRouterProvider('x-ai/grok-code-fast-1', 'Grok Code Fast 1');
+    const grokProvider = new OpenRouterProvider('x-ai/grok-4.1-fast', 'Grok 4.1 Fast');
     const geminiProvider = new OpenRouterProvider('google/gemini-2.5-flash', 'Gemini 2.5 Flash');
     const openaiProvider = new OpenRouterProvider('openai/gpt-oss-120b', 'GPT-OSS 120B');
     const claudeProvider = new OpenRouterProvider('anthropic/claude-sonnet-4.5', 'Claude Sonnet 4.5');
 
     // Register Providers ensuring exact ID matches
-    this.providers.set('x-ai/grok-code-fast-1', grokProvider);
+    this.providers.set('x-ai/grok-4.1-fast', grokProvider);
     this.providers.set('google/gemini-2.5-flash', geminiProvider);
     this.providers.set('openai/gpt-oss-120b', openaiProvider);
     this.providers.set('anthropic/claude-sonnet-4.5', claudeProvider);
@@ -132,6 +132,7 @@ class BackgroundService {
       console.log('📝 Prompt Constructed:', finalPrompt.substring(0, 100) + '...');
 
       // 使用提供者生成回覆
+      console.time('⏱️ [Background] GENERATE_REPLY - OpenRouter API');
       const result = await activeProvider.generateReply({
         // postText is included in stylePrompt by PromptBuilder
         stylePrompt: finalPrompt,
@@ -139,6 +140,7 @@ class BackgroundService {
         apiKey: apiKey,
         images: data.images
       });
+      console.timeEnd('⏱️ [Background] GENERATE_REPLY - OpenRouter API');
 
       if (result.success) {
         console.log('✅ 回覆生成成功，模型:', activeProvider.config.name);
@@ -286,11 +288,13 @@ REASON: [選擇此風格的簡短理由，10字以內]
 
       console.log('🔍 Analysis Prompt Constructed');
 
+      console.time('⏱️ [Background] ANALYZE_POST - OpenRouter API');
       const result = await provider.generateReply({
         stylePrompt: analysisPrompt,
         postText: "",
         apiKey: apiKey
       });
+      console.timeEnd('⏱️ [Background] ANALYZE_POST - OpenRouter API');
 
       if (result.success) {
         console.log('✅ 分析成功');
