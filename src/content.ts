@@ -1038,7 +1038,7 @@ class ThreadsAIAssistant {
     smartBtn.style.color = 'white';
     smartBtn.textContent = '智能分析回覆';
     smartBtn.onclick = () => {
-      if (this.currentPost) this.generateReply(this.currentPost, { id: 'auto', name: 'Auto', description: 'Auto', prompt: '' });
+      if (this.currentPost) this.handleSmartAuto(this.currentPost);
       else this.showError('請先選擇貼文');
     };
     grid.appendChild(smartBtn);
@@ -1324,62 +1324,300 @@ color: #65676b;
     return button;
   }
 
-  private showLoadingState(message: string = 'AI 正在思考中...', contextSnippet: string | null = null) {
-    const existing = document.getElementById('threads-ai-toast');
-    if (existing) existing.remove();
+  // --- Modern Toast System ---
 
-    const toast = document.createElement('div');
-    toast.id = 'threads-ai-toast';
-    toast.style.cssText = `
+  private getToastContainer(): HTMLElement {
+    let container = document.getElementById('sonar-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'sonar-toast-container';
+      container.style.cssText = `
         position: fixed;
         bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #1c1e21;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-        font-size: 14px;
+        left: 24px;
+        z-index: 10001;
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-        z-index: 10001;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        max-width: 90vw;
+        gap: 12px;
+        pointer-events: none; /* Let clicks pass through gaps */
       `;
-    document.body.appendChild(toast);
+      document.body.appendChild(container);
 
-    let html = `<div style="display:flex; align-items:center; gap:8px;"><span class="spinner"></span><span style="font-weight: 500;">${message}</span></div>`;
-    if (contextSnippet) {
-      const safeSnippet = contextSnippet.length > 20 ? contextSnippet.substring(0, 20) + '...' : contextSnippet;
-      html += `<div style="font-size: 12px; color: #b0b3b8; padding-left: 24px;">📄 已連結主文：「${safeSnippet}」</div>`;
-    }
-    toast.innerHTML = html;
-
-    const styleId = 'threads-ai-spinner-style';
-    if (!document.head.querySelector(`#${styleId}`)) {
+      // Inject Styles for Toast
       const style = document.createElement('style');
-      style.id = styleId;
       style.textContent = `
-            .spinner {
-              width: 14px;
-              height: 14px;
-              border: 2px solid white;
-              border-top: 2px solid transparent;
-              border-radius: 50%;
-              animation: spin 1s linear infinite;
-              flex-shrink: 0;
-            }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          `;
+        .sonar-toast {
+          background: rgba(26, 26, 26, 0.9);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: white;
+          padding: 16px 20px;
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-size: 14px;
+          line-height: 1.5;
+          max-width: 360px;
+          min-width: 280px;
+          pointer-events: auto;
+          animation: sonarSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          transition: all 0.3s ease;
+          opacity: 0; 
+          transform: translateX(-20px);
+        }
+        .sonar-toast.visible {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        .sonar-toast.removing {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        .sonar-toast-icon {
+          font-size: 20px;
+          flex-shrink: 0;
+          padding-top: 2px;
+        }
+        .sonar-toast-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .sonar-toast-title {
+          font-weight: 600;
+          font-size: 15px;
+          color: #fff;
+        }
+        .sonar-toast-body {
+          color: #a3a3a3;
+          font-size: 13px;
+        }
+        .sonar-toast-context {
+          margin-top: 6px;
+          padding-top: 6px;
+          border-top: 1px solid rgba(255,255,255,0.1);
+          font-size: 12px;
+          color: #737373;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        @keyframes sonarSlideIn {
+          from { opacity: 0; transform: translateX(-30px) scale(0.95); }
+          to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .sonar-spinner {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        .sonar-toast-close {
+          background: transparent;
+          border: none;
+          color: rgba(255,255,255,0.5);
+          cursor: pointer;
+          font-size: 20px;
+          line-height: 1;
+          padding: 0 0 0 10px;
+          margin-left: auto;
+          align-self: flex-start;
+          transition: color 0.2s;
+        }
+        .sonar-toast-close:hover {
+          color: white;
+        }
+      `;
       document.head.appendChild(style);
     }
+    return container;
+  }
 
-    requestAnimationFrame(() => {
-      if (toast) toast.style.opacity = '1';
+  private showToast(options: {
+    type: 'loading' | 'success' | 'error' | 'info',
+    title?: string,
+    message: string,
+    duration?: number,
+    contextSnippet?: string | null
+  }): HTMLElement {
+    const container = this.getToastContainer();
+    const toast = document.createElement('div');
+    toast.className = 'sonar-toast';
+
+    // Icon Logic
+    let icon = '';
+    if (options.type === 'loading') icon = '<div class="sonar-spinner"></div>';
+    else if (options.type === 'success') icon = '✨';
+    else if (options.type === 'error') icon = '❌';
+    else icon = 'ℹ️';
+
+    // Context HTML
+    let contextHtml = '';
+    if (options.contextSnippet) {
+      const safeSnippet = options.contextSnippet.length > 25 ? options.contextSnippet.substring(0, 25) + '...' : options.contextSnippet;
+      contextHtml = `<div class="sonar-toast-context">📄 已連結: ${safeSnippet}</div>`;
+    }
+
+    // Close Button logic
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'sonar-toast-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      this.removeToast(toast);
+    };
+
+    toast.innerHTML = `
+      <div class="sonar-toast-icon">${icon}</div>
+      <div class="sonar-toast-content">
+        ${options.title ? `<div class="sonar-toast-title">${options.title}</div>` : ''}
+        <div class="sonar-toast-body">${options.message.replace(/\n/g, '<br>')}</div>
+        ${contextHtml}
+      </div>
+    `;
+    toast.appendChild(closeBtn);
+
+    container.appendChild(toast);
+
+    // Trigger Animation
+    requestAnimationFrame(() => toast.classList.add('visible'));
+
+    // Auto Remove
+    if (options.duration !== 0) {
+      const duration = options.duration || (options.type === 'error' ? 5000 : 4000);
+      setTimeout(() => this.removeToast(toast), duration);
+    }
+
+    return toast;
+  }
+
+  private removeToast(toast: HTMLElement) {
+    if (toast.classList.contains('removing')) return;
+    toast.classList.add('removing');
+    toast.addEventListener('transitionend', () => {
+      toast.remove();
+    });
+    // Fallback if transition event fails
+    setTimeout(() => toast.remove(), 500);
+  }
+
+  private updateToast(toast: HTMLElement, options: {
+    type: 'loading' | 'success' | 'error' | 'info',
+    title?: string,
+    message: string,
+    contextSnippet?: string | null
+  }) {
+    // Icon Logic
+    let icon = '';
+    if (options.type === 'loading') icon = '<div class="sonar-spinner"></div>';
+    else if (options.type === 'success') icon = '✨';
+    else if (options.type === 'error') icon = '❌';
+    else icon = 'ℹ️';
+
+    // Context HTML
+    let contextHtml = '';
+    if (options.contextSnippet) {
+      const safeSnippet = options.contextSnippet.length > 25 ? options.contextSnippet.substring(0, 25) + '...' : options.contextSnippet;
+      contextHtml = `<div class="sonar-toast-context">📄 已連結: ${safeSnippet}</div>`;
+    }
+
+    const iconEl = toast.querySelector('.sonar-toast-icon');
+    const contentEl = toast.querySelector('.sonar-toast-content');
+
+    if (iconEl) iconEl.innerHTML = icon;
+    if (contentEl) {
+      contentEl.innerHTML = `
+        ${options.title ? `<div class="sonar-toast-title">${options.title}</div>` : ''}
+        <div class="sonar-toast-body">${options.message.replace(/\n/g, '<br>')}</div>
+        ${contextHtml}
+      `;
+    }
+  }
+
+  // --- Wrapper Methods for Backward Compatibility ---
+
+  private loadingToast: HTMLElement | null = null;
+
+  private showLoadingState(message: string = 'AI 正在思考中...', contextSnippet: string | null = null) {
+    // Remove existing loading toast if any (to prevent duplicates if stuck)
+    this.hideLoadingState();
+    this.loadingToast = this.showToast({
+      type: 'loading',
+      title: '處理中',
+      message: message,
+      duration: 0, // Persistent
+      contextSnippet: contextSnippet
+    });
+  }
+
+
+  private hideLoadingState() {
+    if (this.loadingToast) {
+      this.removeToast(this.loadingToast);
+      this.loadingToast = null;
+    }
+  }
+
+  private showSuccessMessage(message?: string, duration: number = 4000): HTMLElement {
+    const displayMsg = message || '回覆已生成';
+    // Determine if it's the Analysis Result
+    // Determine if it's the Analysis Result
+    if (displayMsg.includes('策略：')) {
+      let toast: HTMLElement;
+
+      // Smooth Transition: If loading toast exists, update it instead of creating new
+      if (this.loadingToast) {
+        toast = this.loadingToast;
+        this.updateToast(toast, {
+          type: 'success',
+          title: '智能分析完成',
+          message: displayMsg
+        });
+        // Clear loading reference so it's not removed as "loading" anymore
+        this.loadingToast = null;
+
+        // Handle duration manually since we bypassed showToast's timer
+        const actualDuration = duration === 4000 ? 8000 : duration;
+        if (actualDuration !== 0) {
+          setTimeout(() => this.removeToast(toast), actualDuration);
+        }
+      } else {
+        // Fallback to creating new
+        toast = this.showToast({
+          type: 'success',
+          title: '智能分析完成',
+          message: displayMsg,
+          duration: duration === 4000 ? 8000 : duration
+        });
+      }
+      return toast;
+    } else {
+      const toast = this.showToast({
+        type: 'success',
+        message: displayMsg,
+        duration: duration
+      });
+      // If this is a final generation success (no '策略'), and we are in smart auto mode (handled by caller pushing to list)
+      // We need to return it.
+      return toast;
+    }
+  }
+
+  private showError(message: string) {
+    console.error(message);
+    this.showToast({
+      type: 'error',
+      title: '發生錯誤',
+      message: message,
+      duration: 5000
     });
   }
 
@@ -1406,22 +1644,9 @@ color: #65676b;
         }
       }
 
-      // Strategy B: Feed View (Sibling Grouping)
-      if (!rootPost) {
-        let currentLevel = post.parentElement;
-        for (let i = 0; i < 6; i++) {
-          if (!currentLevel || currentLevel.tagName === 'BODY' || currentLevel.tagName === 'MAIN') break;
-          const candidates = currentLevel.querySelectorAll('[data-pressable-container="true"]');
-          if (candidates.length > 1) {
-            const first = candidates[0];
-            if (first !== post && first.compareDocumentPosition(post) & Node.DOCUMENT_POSITION_FOLLOWING) {
-              rootPost = first;
-              break;
-            }
-          }
-          currentLevel = currentLevel.parentElement;
-        }
-      }
+      // Strategy B: Feed View (Sibling Grouping) - DISABLED
+      // Reason: In main feed, this incorrectly identifies previous posts as "Root" for independent posts.
+      // if (!rootPost) { ... }
 
       // If we found a root post, and it IS NOT the current post
       if (rootPost && rootPost !== post) {
@@ -1446,7 +1671,93 @@ color: #65676b;
     return finalPostText;
   }
 
-  private async generateReply(post: Element, style: ReplyStyle, strategy: string = '') {
+  private async handleSmartAuto(post: Element) {
+    const finalPostText = this.extractFullContext(post);
+    if (!finalPostText) {
+      this.showError('無法讀取貼文內容');
+      return;
+    }
+
+    this.showLoadingState('AI 正在分析貼文情境與擬定策略...', finalPostText);
+
+    try {
+      // 1. Get Styles List
+      const stylesList = REPLY_STYLES.filter(s => s.id !== 'auto').map(s => s.name).join(', ');
+
+      // 2. Call Analyze
+      const response = await browser.runtime.sendMessage({
+        type: 'ANALYZE_POST',
+        data: { postText: finalPostText, stylesList }
+      });
+
+      if (!response || !response.success) {
+        throw new Error(response?.error || '分析失敗');
+      }
+
+      // 3. Parse Result
+      const analysis = response.analysis || '';
+      // Use non-greedy matching across multiple lines if needed, but standard format is line-based.
+      // We'll use a safer approach: split by specific keys.
+
+      const styleMatch = analysis.match(/STYLE:\s*(.+?)(?=\nSTRATEGY:|\nREASON:|$)/i);
+      const strategyMatch = analysis.match(/STRATEGY:\s*(.+?)(?=\nREASON:|$)/i);
+      const reasonMatch = analysis.match(/REASON:\s*(.+?)(?=$)/i);
+
+      const chosenStyleName = styleMatch ? styleMatch[1].trim() : 'Casual Insight'; // Fallback
+      const strategy = strategyMatch ? strategyMatch[1].trim() : '直接回應';
+      const reason = reasonMatch ? reasonMatch[1].trim() : '符合上下文語氣';
+
+      // map Name Back to ID (Matching by Chinese Name now)
+      let targetStyle: ReplyStyle | undefined;
+
+      // Check for Custom Style
+      if (chosenStyleName.startsWith('Custom:')) {
+        const customName = chosenStyleName.replace('Custom:', '').trim();
+        targetStyle = {
+          id: 'dynamic',
+          name: customName,
+          description: 'AI 自動生成的客製化風格',
+          prompt: 'Dynamic Style' // Placeholder, won't be used directly by PromptBuilder for dynamic
+        };
+      } else {
+        targetStyle = REPLY_STYLES.find(s => s.name === chosenStyleName)
+          || REPLY_STYLES.find(s => chosenStyleName.includes(s.name))
+          || REPLY_STYLES.find(s => s.id !== 'auto'); // Fallback
+      }
+
+      // Clean up reason text (remove potential "REASON:" prefix included by loose regex)
+      const cleanReason = reason.replace(/^REASON[:：]\s*/i, '').trim();
+
+      // 4. Show Analysis Toast (Persistent)
+      // Format:
+      // ✨ 風格：[Style Name]
+      // 🎯 策略：[Strategy]
+      // 💬 理由：[Reason]
+      const analysisToast = this.showSuccessMessage(`✨ 風格：${targetStyle?.name || chosenStyleName}\n🎯 策略：${strategy}\n💬 理由：${cleanReason}`, 0); // 0 = Persistent
+      this.activeSmartToasts.push(analysisToast);
+
+      // 5. Generate Content immediately (user sees toast while generating)
+      if (targetStyle) {
+        // await generation so we can control the final cleanup
+        await this.generateReply(post, targetStyle, strategy, true); // true = isSmartAutoMode
+      }
+
+      // 6. Unified Cleanup after 10 seconds
+      setTimeout(() => {
+        this.activeSmartToasts.forEach(t => this.removeToast(t));
+        this.activeSmartToasts = [];
+      }, 10000);
+
+    } catch (e: any) {
+      console.error('Smart Auto Error:', e);
+      this.showError(e.message);
+      this.hideLoadingState();
+    }
+  }
+
+  private activeSmartToasts: HTMLElement[] = [];
+
+  private async generateReply(post: Element, style: ReplyStyle, strategy: string = '', isSmartAutoMode: boolean = false) {
     const finalPostText = this.extractFullContext(post);
     if (!finalPostText) {
       this.showError('無法讀取貼文內容');
@@ -1532,17 +1843,23 @@ color: #65676b;
       }
     } else {
       // Normal Simulation for specific styles
-      this.showLoadingState(`🧠 正在構思「${style.name}」風格回覆...`, contextSnippet);
-      await new Promise(r => setTimeout(r, 600));
+      // Skip if Smart Auto Mode (legacy logic might affect this, but handleSmartAuto calls with specific style)
+      if (!isSmartAutoMode) {
+        this.showLoadingState(`🧠 正在構思「${style.name}」風格回覆...`, contextSnippet);
+        await new Promise(r => setTimeout(r, 600));
+      }
     }
 
     // Vision Check (Visual Analysis Toast)
-    if (images.length > 0) {
+    // Only show separate loading step if NOT in Smart Auto mode (to preserve Analysis Toast)
+    if (!isSmartAutoMode && images.length > 0) {
       this.showLoadingState('👁️ 正在視覺辨識圖片內容...', contextSnippet);
       await new Promise(r => setTimeout(r, 1000));
     }
 
-    this.showLoadingState(`✨ 正在生成內容...`, contextSnippet);
+    if (!isSmartAutoMode) {
+      this.showLoadingState(`✨ 正在生成內容...`, contextSnippet);
+    }
 
     try {
       const storageResult = await browser.storage.local.get(STORAGE_KEYS.CUSTOM_STYLE_EXAMPLES);
@@ -1559,7 +1876,8 @@ color: #65676b;
           images: images,
           options: {
             useKaomoji: this.useKaomoji,
-            isSelfPost: this.isHostMode
+            isSelfPost: this.isHostMode,
+            dynamicStyleName: style.id === 'dynamic' ? style.name : undefined
           }
         }
       });
@@ -1572,15 +1890,17 @@ color: #65676b;
         const styleMatch = finalReply.match(/STYLE:\s*(.+)$/im);
         const reasonMatch = finalReply.match(/REASON:\s*(.+)$/im);
 
-        if (styleMatch || reasonMatch) {
-          // Remove the specific lines from the reply so they don't appear in the textbox
-          if (styleMatch) finalReply = finalReply.replace(styleMatch[0], '');
-          if (reasonMatch) finalReply = finalReply.replace(reasonMatch[0], '');
+        // Always clean up the reply first if these tags exist
+        if (styleMatch) finalReply = finalReply.replace(styleMatch[0], '');
+        if (reasonMatch) finalReply = finalReply.replace(reasonMatch[0], '');
+        finalReply = finalReply.trim();
+        finalReply = finalReply.replace(/^```\w*\s*/, '').replace(/\s*```$/, '');
 
-          finalReply = finalReply.trim();
-          // Clean up potentially leftover markdown code blocks
-          finalReply = finalReply.replace(/^```\w*\s*/, '').replace(/\s*```$/, '');
-
+        if (isSmartAutoMode) {
+          // In Smart Auto, we already showed a detailed Analysis toast.
+          // The second toast should be simple to avoid clutter.
+          analysisInfo = undefined;
+        } else if (styleMatch || reasonMatch) {
           const styleName = styleMatch ? styleMatch[1].trim() : '智能推薦';
           const reasonText = reasonMatch ? reasonMatch[1].trim() : '根據上下文自動選擇';
 
@@ -1590,16 +1910,11 @@ color: #65676b;
           analysisInfo = `✨ 風格：智能搭配 (自動)\n💬 理由：AI 自動分析情境`;
         }
 
-        // UX Improvement: Show Analysis Toast FIRST, then fill text
-        if (analysisInfo && style.id === 'auto') {
-          this.showSuccessMessage(analysisInfo);
-          // Delay filling the input to simulate "Analyze -> Generate" flow
-          setTimeout(() => {
-            this.fillReplyInput(replyInput as HTMLInputElement, finalReply, undefined); // Pass undefined to avoid showing toast 2nd time
-          }, 1500);
-        } else {
-          // Normal flow for manually selected styles
-          this.fillReplyInput(replyInput as HTMLInputElement, finalReply, analysisInfo);
+        // Fill the input and capture the toast if smart auto mode
+        const toast = this.fillReplyInput(replyInput as HTMLInputElement, finalReply, analysisInfo);
+
+        if (isSmartAutoMode && toast) {
+          this.activeSmartToasts.push(toast);
         }
       } else {
         if (response && response.error && (response.error.includes('Key') || response.error === 'NO_API_KEY')) {
@@ -1663,6 +1978,17 @@ color: #65676b;
 
         // Exclude common UI labels that might be captured
         if (['翻譯年糕', 'Translate', 'View insights', '查看洞察報告'].includes(text)) return false;
+
+        // Exclude Stock/Crypto Tickers (e.g. [BABA +1.67%], $BTC) - Likely User Bio/Header garbage
+        if (/\[[A-Z]{2,6}\s*[+\-]?\d+(\.\d+)?%\]/.test(text)) return false;
+        if (/^\$[A-Z]{2,6}/.test(text)) return false; // $BTC starting line
+
+        // Exclude pure number lines (e.g. "24 2" -> Likes/Comments count)
+        if (/^[\d\s,.]+$/.test(text)) return false;
+
+        // Exclude raw handles if captured as separate lines (e.g. u_username)
+        // Adjust regex to be safe, only exclude if it looks *exactly* like a handle and nothing else
+        if (/^u_[a-zA-Z0-9_.]+$/.test(text)) return false;
 
         return true;
       });
@@ -1920,18 +2246,7 @@ color: #65676b;
 
   // Duplicate removed
 
-  private hideLoadingState() {
-    const toast = document.getElementById('threads-ai-toast');
-    if (toast) {
-      toast.style.opacity = '0';
-      setTimeout(() => {
-        if (toast) toast.remove();
-      }, 300);
-    }
-    // Cleanup old ID just in case
-    const oldLoading = document.getElementById('threads-ai-loading');
-    if (oldLoading) oldLoading.remove();
-  }
+
 
   private fillReplyInput(input: HTMLInputElement | HTMLTextAreaElement, text: string, analysisInfo?: string) {
     // 聚焦輸入框
@@ -1953,72 +2268,17 @@ color: #65676b;
       // 忽略錯誤
     }
 
-    this.showSuccessMessage(analysisInfo);
+    // Pass isSmartAutoMode flag logic implicitly via optional param or analyze caller?
+    // Determine duration: if we are in Smart Auto Mode (passed implicitly?), actually we want 
+    // the caller (handleSmartAuto) to control the duration if possible.
+    // BUT, since we don't pass isSmartAuto flag here easily without breaking legacy signatures...
+    // Let's just return the toast.
+    return this.showSuccessMessage(analysisInfo, 4000);
   }
 
-  private showSuccessMessage(analysisInfo?: string) {
-    const message = document.createElement('div');
 
-    // Style update for clearer analysis display
-    const contentHtml = analysisInfo
-      ? `<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-           <span style="font-size:16px;">✨</span>
-           <span style="font-weight:600; font-size:13px; color:#4ade80;">AI 智能搭配完成</span>
-         </div>
-         <div style="font-size:13px; line-height:1.5; color:#e4e6eb; white-space: pre-wrap;">${analysisInfo}</div>`
-      : `<div style="display:flex; align-items:center; gap:8px;">
-           <span style="color:#4ade80;">✅</span>
-           <span>回覆已生成</span>
-         </div>`;
 
-    message.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #242526;
-      border: 1px solid #3e4042;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      z-index: 10001;
-      animation: slideUpFade 0.3s ease;
-      max-width: 90vw;
-      width: max-content;
-      min-width: 200px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      backdrop-filter: blur(8px);
-    `;
-    message.innerHTML = contentHtml;
 
-    document.body.appendChild(message);
-    setTimeout(() => message.remove(), analysisInfo ? 8000 : 3000); // Give users more time to read analysis
-  }
-
-  private showError(errorMessage: string) {
-    const message = document.createElement('div');
-    message.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #e74c3c;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      z-index: 10001;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    `;
-    message.textContent = `❌ ${errorMessage}`;
-
-    document.body.appendChild(message);
-    setTimeout(() => message.remove(), 5000);
-  }
 
   private showApiKeyPrompt() {
     const prompt = document.createElement('div');

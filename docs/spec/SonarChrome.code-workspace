@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../SonarAgent"
+		},
+		{
+			"path": "../../../../threadres"
+		}
+	],
+	"settings": {}
+}

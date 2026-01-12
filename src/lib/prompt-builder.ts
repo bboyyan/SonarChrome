@@ -13,10 +13,16 @@ export const PromptBuilder = {
             isSelfPost: boolean;
             strategy?: string;
             customExamples?: string;
+            dynamicStyleName?: string;
         } = { useKaomoji: false, isSelfPost: false }
     ): string {
         // 1. 定義風格策略 (Style Strategy Definitions)
         const styleStrategy = this.getStyleStrategy(styleId);
+
+        // Dynamic Style Override
+        if (styleId === 'dynamic' && options.dynamicStyleName) {
+            styleStrategy.name = options.dynamicStyleName;
+        }
 
         // 2. 定義語調人設 (Persona/Tone)
         let persona = tone
@@ -79,10 +85,11 @@ CONTEXT:
 - Target Style: ${styleStrategy.name} - ${styleStrategy.definition}
 
 CRITICAL OUTPUT RULES:
-- Output ONLY the reply text. Nothing else.
-- DO NOT output any instructions, explanations, or meta-commentary.
-- DO NOT mention word counts, strategies, or formatting rules in your output.
-- DO NOT output anything in parentheses like "(Under 50 words...)" or "(Final:...)".
+- Output the reply text first.
+- At the very end, you MUST append two lines:
+  STYLE: [The English ID of the style strategy used, e.g. "chill", "value", etc.]
+  REASON: [A very short 10-word reason in Traditional Chinese why this fits]
+- DO NOT output any other instructions.
 - Just write the reply as if you're typing it directly into Threads.
 
 TASK:
@@ -141,6 +148,10 @@ REPLY:`;
             'lust': {
                 name: "Profile Lure (Curiosity Gap)",
                 definition: "Create a curiosity gap. Mention a resource, story, or detail that is ONLY available on your profile/pinned post. MAX 1-2 SHORT sentences. Example: '這件事其實有個關鍵細節，字數不夠寫不下，我置頂文有完整復盤...'"
+            },
+            'dynamic': {
+                name: "Dynamic Analysis",
+                definition: "Adaptive style based on specific context analysis."
             }
         };
 
