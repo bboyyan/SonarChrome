@@ -626,6 +626,72 @@ class ThreadsHelper {
           box-shadow: 0 10px 20px -5px rgba(0,0,0,0.1);
         }
         
+        .sonar-btn.primary:hover {
+          background: #0085df;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 149, 246, 0.3);
+        }
+
+        /* Checkbox Style */
+        .sonar-checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: #475569;
+          cursor: pointer;
+          user-select: none;
+        }
+        .__fb-dark-mode .sonar-checkbox-label {
+          color: #94a3b8;
+        }
+        .sonar-checkbox-label input[type="checkbox"] {
+          accent-color: #0095f6;
+          width: 16px;
+          height: 16px;
+          margin: 0;
+          cursor: pointer;
+        }
+
+        /* Pastel / Pro Button Style */
+        .sonar-btn-pastel {
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 0 16px;
+            height: 40px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+        }
+        .sonar-btn-pastel:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+        .__fb-dark-mode .sonar-btn-pastel {
+            background: rgba(255,255,255,0.05);
+            color: #94a3b8;
+            border-color: rgba(255,255,255,0.1);
+        }
+        .__fb-dark-mode .sonar-btn-pastel:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .sonar-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        
         @keyframes sonar-fade-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes sonar-slide-up { 
           from { opacity: 0; transform: translateY(20px) scale(0.96); } 
@@ -862,15 +928,16 @@ class ThreadsAIAssistant {
     </div>
     <div class="sonar-header">
       <div class="sonar-logo">Sonar AI</div>
-
     </div>
     <div class="sonar-body">
+      <!-- Context Preview -->
       <div id="sonar-context-area" class="sonar-context" style="display:none;">
         <div class="sonar-context-label">當前文脈 (Active Context)</div>
         <div id="sonar-context-text"></div>
       </div>
 
       <div class="sonar-section">
+        <!-- Batch Mode Toggle -->
         <div class="sonar-batch-row" id="sonar-sidebar-batch-toggle" style="cursor:pointer; padding:16px; display:flex; justify-content:space-between; align-items:center; border:none; background:transparent;">
           <div style="display:flex;align-items:center;gap:12px;">
             <div>
@@ -883,85 +950,83 @@ class ThreadsAIAssistant {
           </div>
         </div>
         
-        <!-- Preferences Section -->
-        <div style="padding: 0 16px 16px 16px; margin-top: -4px;">
-            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:12px; padding: 8px; border-radius: 8px; background: #f8fafc;">
-                <span style="font-size:13px; font-weight:600; color: #334155;">回覆長度</span>
-                <select id="sonar-opt-length" style="border:1px solid #cbd5e1; border-radius:4px; padding:2px 4px; font-size:12px; background:white; color:#334155; height: 26px;">
-                  <option value="short">短 (1-2句)</option>
-                  <option value="medium">中 (2-4句)</option>
-                  <option value="long">長 (4-8句)</option>
-                </select>
+        <!-- Preferences: Is OP & Kaomoji -->
+        <div class="sonar-settings-row" style="padding: 12px 16px; display:flex; gap:16px; border-bottom:1px solid rgba(0,0,0,0.05); background:rgba(0,0,0,0.02);">
+            <label class="sonar-checkbox-label" title="將你視為原 Po，回覆留言者的評論">
+                <input type="checkbox" id="sonar-opt-host"> 我是樓主 (OP)
             </label>
-            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:12px; padding: 8px; border-radius: 8px; background: #f8fafc;">
-                <span style="font-size:13px; font-weight:600; color: #334155;">( ≧Д≦) 顏文字</span>
-                <input type="checkbox" id="sonar-opt-kaomoji" style="accent-color:#0095f6; transform: scale(1.2);">
-            </label>
-            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding: 8px; border-radius: 8px; background: #f8fafc;">
-                <span style="font-size:13px; font-weight:600; color: #334155;">我是樓主 (Host Mode)</span>
-                <input type="checkbox" id="sonar-opt-host" style="accent-color:#0095f6; transform: scale(1.2);">
-            </label>
+            <label class="sonar-checkbox-label" title="Enable Kaomoji">
+      <input type="checkbox" id="sonar-opt-kaomoji"> 顏文字 (Kaomoji)
+        </label>
         </div>
-      </div>
 
-      <div id="sonar-tools-area" style="margin-top:24px;">
-        <div class="sonar-section-title">AI 工具箱 (AI Tools)</div>
-        <div class="sonar-grid" id="sonar-style-grid"></div>
-      </div>
-    </div>
+        <!-- Preferences: Length -->
+          <div class="sonar-settings-row" style = "padding: 12px 16px; border-bottom:1px solid rgba(0,0,0,0.05);" >
+            <label style="font-size:12px; color:#64748b; display:block; margin-bottom:6px;" > 回覆長度(Length) </label>
+              <select id="sonar-reply-length" class="sonar-select" style = "width:100%; padding:6px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px;" >
+                <option value="short" > 短(1 - 2句) </option>
+                  <option value="medium"> 中(2 - 4句) </option>
+                    <option value="long"> 長(4 - 8句) </option>
+                      </select>
+                      </div>
 
-    <div class="sonar-footer">
-      <button id="sonar-sidebar-settings" class="sonar-btn">
-        設定與模型
-      </button>
-    </div>
-    `;
+                      <!-- Tools Area -->
+                        <div id="sonar-tools-area" style = "padding: 12px;" > </div>
+
+                          <div class="sonar-footer">
+                            <button id="sonar-sidebar-settings" class="sonar-btn" > 設定與模型 </button>
+                              </div>
+                                `;
 
     document.body.appendChild(this.sidebar);
 
-    // Bind Events
-    this.sidebar.querySelector('#sonar-sidebar-handle')?.addEventListener('click', () => this.toggleSidebar());
+    // Bind Close Button
+    this.sidebar.querySelector('#sonar-close-sidebar')?.addEventListener('click', () => {
+      this.toggleSidebar();
+    });
 
+    // Bind Handle (Toggle)
+    this.sidebar.querySelector('#sonar-sidebar-handle')?.addEventListener('click', () => {
+      this.toggleSidebar();
+    });
 
-    this.sidebar.querySelector('#sonar-sidebar-batch-toggle')?.addEventListener('click', (e) => {
-      e.stopPropagation();
+    // Bind Batch Switch
+    this.sidebar.querySelector('#sonar-sidebar-batch-toggle')?.addEventListener('click', () => {
       this.toggleBatchMode();
-      this.updateSidebarUI();
     });
 
-    this.sidebar.querySelector('#sonar-sidebar-settings')?.addEventListener('click', () => {
-      browser.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-    });
-
-    // Option Toggles
-    const kaoToggle = this.sidebar.querySelector('#sonar-opt-kaomoji') as HTMLInputElement;
-    if (kaoToggle) {
-      kaoToggle.checked = this.useKaomoji;
-      kaoToggle.addEventListener('change', () => {
-        this.useKaomoji = kaoToggle.checked;
-        this.saveSettings();
-      });
-    }
-
-    const lengthSelect = this.sidebar.querySelector('#sonar-opt-length') as HTMLSelectElement;
-    if (lengthSelect) {
-      lengthSelect.value = this.replyLength;
-      lengthSelect.addEventListener('change', () => {
-        this.replyLength = lengthSelect.value as any;
-        this.saveSettings();
-      });
-    }
-
+    // Bind Settings (Host/Kaomoji) - RESTORED
     const hostToggle = this.sidebar.querySelector('#sonar-opt-host') as HTMLInputElement;
     if (hostToggle) {
       hostToggle.checked = this.isHostMode;
       hostToggle.addEventListener('change', () => {
         this.isHostMode = hostToggle.checked;
-        // Host mode is transient usually, but strict users might want it saved? 
-        // For now, let's keep it transient or save it if requested. 
-        // The original logic didn't seem to save isHostMode, but let's stick to existing pattern.
+        this.saveSettings();
       });
     }
+
+    const kaomojiToggle = this.sidebar.querySelector('#sonar-opt-kaomoji') as HTMLInputElement;
+    if (kaomojiToggle) {
+      kaomojiToggle.checked = this.useKaomoji;
+      kaomojiToggle.addEventListener('change', () => {
+        this.useKaomoji = kaomojiToggle.checked;
+        this.saveSettings();
+      });
+    }
+
+    // Bind Length Selector
+    const lengthSelect = this.sidebar.querySelector('#sonar-reply-length') as HTMLSelectElement;
+    if (lengthSelect) {
+      lengthSelect.value = this.replyLength;
+      lengthSelect.addEventListener('change', () => {
+        this.replyLength = lengthSelect.value as 'short' | 'medium' | 'long';
+        this.saveSettings(); // Persist it
+      });
+    }
+
+    this.sidebar.querySelector('#sonar-sidebar-settings')?.addEventListener('click', () => {
+      browser.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+    });
 
     this.renderSidebarStyles();
     this.updateSidebarUI();
@@ -1002,22 +1067,22 @@ class ThreadsAIAssistant {
     if (toolsArea) {
       if (this.isBatchMode) {
         toolsArea.innerHTML = `
-          <div class="sonar-section-title">批次佇列 (${this.batchQueue.length > 0 ? '執行中' : '待命'})</div>
+          <div class="sonar-section-title">批次佇列(${this.batchQueue.length > 0 ? '執行中' : '待命'})</div>
           <div style="margin-bottom:12px; display: flex; gap: 8px;">
-             <input type="number" id="batch-count-input" min="1" max="20" value="5" class="sonar-input" style="width: 80px; text-align: center;">
-             <div style="display:flex; flex-direction:column; justify-content:center;">
-                <span style="font-size:13px; font-weight:600;">處理數量</span>
-                <span style="font-size:11px; color:#94a3b8;">Max 20</span>
-             </div>
+            <input type="number" id="batch-count-input" min="1" max="20" value="5" class="sonar-input" style="width: 80px; text-align: center;">
+            <div style="display:flex; flex-direction:column; justify-content:center;">
+              <span style="font-size:13px; font-weight:600;">處理數量</span>
+              <span style="font-size:11px; color:#94a3b8;">Max 20</span>
+            </div>
           </div>
           <div style="margin-bottom:12px;">
             <input type="text" id="batch-fixed-input" placeholder="輸入固定回覆內容..." style="width:100%; padding:12px; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:#fff; color:#333; font-size:13px; outline:none; transition:border 0.2s;">
             <div style="font-size:11px; color:#94a3b8; margin-top:4px;">* 將自動搜尋接下來的 N 則貼文進行回覆</div>
           </div>
           <div class="sonar-grid">
-            <button class="sonar-btn primary" id="batch-action-fixed" style="background:#0095f6; border-color:#0095f6; color:white;">填入固定內容</button>
-            <button class="sonar-btn" id="batch-action-random" style="border:1px solid #dbdbdb; color:#333;">AI 隨機風格</button>
-            <button class="sonar-btn" id="batch-action-cancel" style="grid-column: span 2; background:#f1f5f9; color:#333;">關閉批次模式</button>
+              <button class="sonar-btn primary" id="batch-action-fixed" style="background:#0095f6; border-color:#0095f6; color:white;">填入固定內容</button>
+              <button class="sonar-btn" id="batch-action-random" style="border:1px solid #dbdbdb; color:#333;">AI 隨機風格</button>
+              <button class="sonar-btn" id="batch-action-cancel" style="grid-column: span 2; background:#f1f5f9; color:#333;">關閉批次模式</button>
           </div>
         `;
 
@@ -1039,7 +1104,7 @@ class ThreadsAIAssistant {
 
       } else {
         // Normal Mode
-        toolsArea.innerHTML = `<div class="sonar-section-title">快速操作 (Quick Actions)</div><div class="sonar-grid" id="sonar-style-grid"></div>`;
+        toolsArea.innerHTML = `<div class="sonar-section-title">快速操作(Quick Actions)</div><div class="sonar-grid" id="sonar-style-grid"></div>`;
         this.renderSidebarStyles();
       }
     }
@@ -1050,33 +1115,68 @@ class ThreadsAIAssistant {
     if (!grid) return;
     grid.innerHTML = '';
 
-    // Smart Auto
+    // 1. Smart Auto (Top, Full Width)
     const smartBtn = document.createElement('button');
     smartBtn.className = 'sonar-btn';
-    smartBtn.style.background = '#0095f6';
+    smartBtn.style.background = 'linear-gradient(135deg, #0095f6 0%, #0064e0 100%)';
     smartBtn.style.border = 'none';
     smartBtn.style.color = 'white';
-    smartBtn.textContent = '智能分析回覆';
+    smartBtn.style.gridColumn = '1 / -1'; // Full width
+    smartBtn.style.height = '44px';
+    smartBtn.textContent = '✨ 智能分析回覆 (Smart Auto)';
     smartBtn.onclick = () => {
       if (this.currentPost) this.handleSmartAuto(this.currentPost);
       else this.showError('請先選擇貼文');
     };
     grid.appendChild(smartBtn);
 
+    // Filter styles
+    const coreStyles = ['relatable', 'witty', 'insight', 'question', 'support', 'direct'];
+    const proStyles = ['story', 'spicy', 'analogy', 'philosophical', 'logic'];
+
+    // 2. Core Styles (Primary)
     REPLY_STYLES.forEach(style => {
-      if (style.id === 'auto') return;
+      if (!coreStyles.includes(style.id)) return;
       const btn = document.createElement('button');
-      btn.className = 'sonar-btn';
+      btn.className = 'sonar-btn'; // Default style
       btn.textContent = style.name;
-      btn.onclick = () => {
-        if (this.currentPost) {
-          this.generateReply(this.currentPost, style);
-        } else {
-          this.showError('請先選擇貼文');
-        }
-      };
+      btn.onclick = () => this.handleGenerateClick(style); // Refactored handler
       grid.appendChild(btn);
     });
+
+    // Divider
+    const divider = document.createElement('div');
+    divider.style.gridColumn = '1 / -1';
+    divider.style.margin = '12px 0 4px 0';
+    divider.style.textAlign = 'center';
+    divider.innerHTML = `
+      <div style="position:relative; height:1px; background:rgba(0,0,0,0.1); top:10px;"></div>
+      <span style="position:relative; background:var(--bg-color, #fff); padding:0 8px; color:#94a3b8; font-size:11px; font-weight:500;">進階風格</span>
+    `;
+    // Dark mode bg adjustment hack
+    if (document.documentElement.classList.contains('__fb-dark-mode')) {
+      divider.innerHTML = divider.innerHTML.replace('var(--bg-color, #fff)', '#101010');
+    }
+    grid.appendChild(divider);
+
+    // 3. Pro Styles (Pastel)
+    REPLY_STYLES.forEach(style => {
+      if (!proStyles.includes(style.id)) return;
+      const btn = document.createElement('button');
+      btn.className = 'sonar-btn-pastel'; // Pastel style
+      btn.textContent = style.name;
+      btn.onclick = () => this.handleGenerateClick(style);
+      grid.appendChild(btn);
+    });
+  }
+
+  // Refactored click handler
+  private handleGenerateClick(style: ReplyStyle) {
+    if (this.currentPost) {
+      this.generateReply(this.currentPost, style);
+    } else {
+      this.showError('請先選擇貼文');
+    }
   }
 
   private handleAutoBatch(count: number, mode: 'fixed' | 'random', fixedText: string = '') {
@@ -1185,7 +1285,7 @@ class ThreadsAIAssistant {
       const stored = localStorage.getItem(this.localStorageKey);
       if (stored) {
         const settings = JSON.parse(stored);
-        // this.useEmoji removed
+        this.isHostMode = settings.isHostMode ?? false;
         this.useKaomoji = settings.useKaomoji ?? false;
         this.replyLength = settings.replyLength ?? 'short';
       }
@@ -1197,6 +1297,7 @@ class ThreadsAIAssistant {
   private saveSettings() {
     try {
       localStorage.setItem(this.localStorageKey, JSON.stringify({
+        isHostMode: this.isHostMode,
         useKaomoji: this.useKaomoji,
         replyLength: this.replyLength
       }));
@@ -1315,20 +1416,20 @@ class ThreadsAIAssistant {
     const button = document.createElement('button');
     button.className = 'threads-ai-button';
     button.style.cssText = `
-display: inline - flex;
-align - items: center;
-justify - content: center;
-width: 40px;
-height: 40px;
-border: none;
-background: transparent;
-border - radius: 50 %;
-cursor: pointer;
-margin - left: 8px;
-transition: all 0.2s ease;
-font - size: 18px;
-color: #65676b;
-`;
+    display: inline - flex;
+    align - items: center;
+    justify - content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border - radius: 50 %;
+    cursor: pointer;
+    margin - left: 8px;
+    transition: all 0.2s ease;
+    font - size: 18px;
+    color: #65676b;
+    `;
 
     button.innerHTML = '✨';
     button.title = 'AI 智慧回覆';
@@ -1360,110 +1461,110 @@ color: #65676b;
       container = document.createElement('div');
       container.id = 'sonar-toast-container';
       container.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        left: 24px;
-        z-index: 10001;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        pointer-events: none; /* Let clicks pass through gaps */
-      `;
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none; /* Let clicks pass through gaps */
+    `;
       document.body.appendChild(container);
 
       // Inject Styles for Toast
       const style = document.createElement('style');
       style.textContent = `
-        .sonar-toast {
-          background: rgba(26, 26, 26, 0.9);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: white;
-          padding: 16px 20px;
-          border-radius: 16px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-          font-size: 14px;
-          line-height: 1.5;
-          max-width: 360px;
-          min-width: 280px;
-          pointer-events: auto;
-          animation: sonarSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          transition: all 0.3s ease;
-          opacity: 0; 
-          transform: translateX(-20px);
-        }
-        .sonar-toast.visible {
-          opacity: 1;
-          transform: translateX(0);
-        }
-        .sonar-toast.removing {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        .sonar-toast-icon {
-          font-size: 20px;
-          flex-shrink: 0;
-          padding-top: 2px;
-        }
-        .sonar-toast-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .sonar-toast-title {
-          font-weight: 600;
-          font-size: 15px;
-          color: #fff;
-        }
-        .sonar-toast-body {
-          color: #a3a3a3;
-          font-size: 13px;
-        }
-        .sonar-toast-context {
-          margin-top: 6px;
-          padding-top: 6px;
-          border-top: 1px solid rgba(255,255,255,0.1);
-          font-size: 12px;
-          color: #737373;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        @keyframes sonarSlideIn {
-          from { opacity: 0; transform: translateX(-30px) scale(0.95); }
-          to { opacity: 1; transform: translateX(0) scale(1); }
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .sonar-spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top: 2px solid white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-        .sonar-toast-close {
-          background: transparent;
-          border: none;
-          color: rgba(255,255,255,0.5);
-          cursor: pointer;
-          font-size: 20px;
-          line-height: 1;
-          padding: 0 0 0 10px;
-          margin-left: auto;
-          align-self: flex-start;
-          transition: color 0.2s;
-        }
-        .sonar-toast-close:hover {
-          color: white;
-        }
-      `;
+      .sonar-toast {
+        background: rgba(26, 26, 26, 0.9);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 16px 20px;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        max-width: 360px;
+        min-width: 280px;
+        pointer-events: auto;
+        animation: sonarSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        transition: all 0.3s ease;
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      .sonar-toast.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .sonar-toast.removing {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .sonar-toast-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+        padding-top: 2px;
+      }
+      .sonar-toast-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sonar-toast-title {
+        font-weight: 600;
+        font-size: 15px;
+        color: #fff;
+      }
+      .sonar-toast-body {
+        color: #a3a3a3;
+        font-size: 13px;
+      }
+      .sonar-toast-context {
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 12px;
+        color: #737373;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      @keyframes sonarSlideIn {
+        from { opacity: 0; transform: translateX(-30px) scale(0.95); }
+        to { opacity: 1; transform: translateX(0) scale(1); }
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .sonar-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      .sonar-toast-close {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 1;
+        padding: 0 0 0 10px;
+        margin-left: auto;
+        align-self: flex-start;
+        transition: color 0.2s;
+      }
+      .sonar-toast-close:hover {
+        color: white;
+      }
+    `;
       document.head.appendChild(style);
     }
     return container;
@@ -2034,6 +2135,21 @@ color: #65676b;
   private toggleBatchMode() {
     this.isBatchMode = !this.isBatchMode;
 
+    // Update Sidebar Toggle UI
+    if (this.sidebar) {
+      const switchEl = this.sidebar.querySelector('#sonar-sidebar-batch-switch') as HTMLElement;
+      const knob = switchEl?.querySelector('div') as HTMLElement;
+      if (switchEl && knob) {
+        if (this.isBatchMode) {
+          switchEl.style.background = '#3b82f6';
+          knob.style.transform = 'translateX(18px)';
+        } else {
+          switchEl.style.background = '#e2e8f0';
+          knob.style.transform = 'translateX(0)';
+        }
+      }
+    }
+
     if (this.isBatchMode) {
       this.renderBatchActionBar();
       this.injectBatchCheckboxes();
@@ -2055,6 +2171,8 @@ color: #65676b;
       // Remove all checkboxes
       document.querySelectorAll('.sonar-batch-checkbox').forEach(el => el.remove());
     }
+
+    this.updateSidebarUI();
   }
 
   private batchObserverInterval: number | null = null;

@@ -105,53 +105,57 @@ REPLY:`;
      */
     getStyleStrategy(styleId: string): { name: string; definition: string } {
         const strategies: Record<string, { name: string; definition: string }> = {
-            'connection': {
-                name: "High Resonance",
-                definition: "Brief, relatable reaction. Show you 'get it'. MAX 1-2 sentences. Example: '真的... 看到那個直接滑掉'"
+            // --- Core 6 ---
+            'relatable': {
+                name: "Genuinely Relatable (共鳴)",
+                definition: "Brief, empathy-first reaction. Show you feel the same way. MAX 1-2 sentences. Example: '真的... 看到那個瞬間超有感'"
             },
-            'value': {
-                name: "Casual Insight",
-                definition: "Share experience casually. NO teaching. MAX 2 sentences. Example: '上次也遇到類似的，結果是 key 沒設好'"
+            'witty': {
+                name: "Witty Banter (幽默接梗)",
+                definition: "Playful, light-hearted, maybe a tiny friendly roast. MAX 1-2 sentences. Example: '笑死 這根本是我的日常寫照'"
             },
-            'chill': {
-                name: "Chill / Circle Talk",
-                definition: "Low effort, self-deprecating or soft complaint. MAX 1-2 sentences. Example: '笑死 我上次也這樣'"
-            },
-            'hype': {
-                name: "Pure Hype",
-                definition: "Genuine supportive reaction. Like a friend hyping you up. MAX 1 sentence. Example: '太強了吧'"
-            },
-            'spicy': {
-                name: "Spicy Take",
-                definition: "A bold, slightly contrarian perspective. Sparks discussion. MAX 2 sentences."
-            },
-            'story': {
-                name: "Mini Story",
-                definition: "Share a VERY brief personal story/experience. MUST be under 2 sentences. Example: '之前做過類似的，結果 demo 炸掉...'"
+            'insight': {
+                name: "Thoughtful Insight (見解)",
+                definition: "Share a unique perspective or value casually. NO preaching. MAX 2-3 sentences. Example: '其實換個角度看，這樣反而更省力...'"
             },
             'question': {
-                name: "Curious Question",
-                definition: "Ask a genuine follow-up question. MAX 1 question, no preamble. Just ask directly."
+                name: "Curious Spark (提問)",
+                definition: "Ask a specific, genuine follow-up question to open more topics. MAX 1 question. Example: '好奇問一下，那你後來怎麼解決的？'"
             },
-            'flex': {
-                name: "Subtle Flex",
-                definition: "Mention related work/experience naturally. MAX 1-2 sentences. Example: '我們上個月也做了類似的...'"
+            'support': {
+                name: "Warm Support (應援)",
+                definition: "Pure positivity and encouragement. MAX 1-2 sentences. Example: '辛苦了！最後的成果一定很棒 加油💪'"
             },
-            'hook': {
-                name: "Cliffhanger Hook",
-                definition: "Say something intriguing but incomplete. MUST be 1 SHORT sentence only. Example: '這招我有個更狠的做法...'"
+            'direct': {
+                name: "Direct Answer (直球)",
+                definition: "Answer the question directly and concisely. No fluff. MAX 2 sentences. Example: '選A比較好，因為CP值最高'"
             },
-            'collab': {
-                name: "Collab Hint",
-                definition: "Express interest in connecting. Keep it casual. MAX 1-2 sentences. Example: '這個想法不錯欸 有機會可以聊聊'"
+
+            // --- Extended 5 ---
+            'story': {
+                name: "Mini Story (微故事)",
+                definition: "Share a VERY brief personal anecdote to connect. MAX 2-3 sentences. Example: '這讓我想起上次我去日本，也是遇到一樣狀況...'"
             },
-            'lust': {
-                name: "Profile Lure (Curiosity Gap)",
-                definition: "Create a curiosity gap. Mention a resource, story, or detail that is ONLY available on your profile/pinned post. MAX 1-2 SHORT sentences. Example: '這件事其實有個關鍵細節，字數不夠寫不下，我置頂文有完整復盤...'"
+            'spicy': {
+                name: "Spicy Take (逆風)",
+                definition: "A bold, slightly contrarian perspective. Respectful but sharp. MAX 2 sentences. Example: '雖然逆風，但我其實覺得舊版比較好用...'"
             },
+            'analogy': {
+                name: "Creative Analogy (神比喻)",
+                definition: "Explain the situation using a creative metaphor. MAX 2 sentences. Example: '這感覺就像是買了跑車卻只能在巷弄開一樣憋屈'"
+            },
+            'philosophical': {
+                name: "Deep Thought (深度)",
+                definition: "Reflective, big-picture thinking. Calm tone. MAX 2-3 sentences. Example: '其實這反映了我們這代人的集體焦慮...'"
+            },
+            'logic': {
+                name: "Logic Analysis (邏輯)",
+                definition: "Structured, logical breakdown (Point 1, 2). MAX 3 sentences. Example: '分兩點來看：一是成本，二是時間...'"
+            },
+
             'dynamic': {
                 name: "Dynamic Analysis",
-                definition: "Adaptive style based on specific context analysis."
+                definition: "Analyze the post and pick the BEST style from the list above. e.g. use 'support' for sad posts, 'witty' for memes."
             }
         };
 
@@ -210,10 +214,10 @@ ${lengthRule}
 Input: "午餐吃什麼好猶豫"
 Output:
 <analysis>
-STYLE: question
-REASON: 對方在尋求建議
+STYLE: relatable
+REASON: 對方在訴苦，表達同感
 </analysis>
-附近那間拉麵店你吃過了嗎？
+這種時候真的會選擇障礙發作... 最後都去買超商 😂
 
 ⚠️ NOTE: The above is for XML structure reference ONLY. 
 Do NOT copy the content or tone. Your reply MUST be unique and directly address the post below.

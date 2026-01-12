@@ -1,71 +1,74 @@
 import type { ReplyStyle, BrandTone } from './types';
 
 export const REPLY_STYLES: ReplyStyle[] = [
+    // --- Core 6 (Primary) ---
     {
-        id: 'connection',
-        name: '建立連結',
-        description: '高度共鳴，表達「我懂你」',
-        prompt: 'High Resonance'
+        id: 'relatable',
+        name: '共鳴',
+        description: '我也這樣覺得！(Relatable)',
+        prompt: 'Genuinely Relatable'
     },
     {
-        id: 'value',
-        name: '隨性見解',
-        description: '分享經驗但不說教',
-        prompt: 'Casual Insight'
+        id: 'witty',
+        name: '接梗',
+        description: '笑死 + 吐槽 (Witty)',
+        prompt: 'Witty Banter'
     },
     {
-        id: 'chill',
-        name: '圈內搭話',
-        description: '輕鬆互動，微羨慕或假抱怨',
-        prompt: 'Chill / Circle Talk'
-    },
-    {
-        id: 'hype',
-        name: '純粹應援',
-        description: '像朋友一樣幫你打氣',
-        prompt: 'Pure Hype'
-    },
-    {
-        id: 'spicy',
-        name: '辛辣觀點',
-        description: '大膽、稍微逆風的觀點',
-        prompt: 'Spicy Take'
-    },
-    {
-        id: 'story',
-        name: '極短編',
-        description: '分享極短的個人故事',
-        prompt: 'Mini Story'
+        id: 'insight',
+        name: '見解',
+        description: '其實還可以這樣... (Insight)',
+        prompt: 'Thoughtful Insight'
     },
     {
         id: 'question',
-        name: '好奇提問',
-        description: '真誠追問，引發對話',
-        prompt: 'Curious Question'
+        name: '提問',
+        description: '那如果是...？ (Curious)',
+        prompt: 'Curious Spark'
     },
     {
-        id: 'flex',
-        name: '微炫耀',
-        description: '低調展示實力',
-        prompt: 'Subtle Flex'
+        id: 'support',
+        name: '應援',
+        description: '加油！辛苦了 (Support)',
+        prompt: 'Warm Support'
     },
     {
-        id: 'hook',
-        name: '埋鉤子',
-        description: '話只說一半，引發好奇',
-        prompt: 'Cliffhanger Hook'
+        id: 'direct',
+        name: '直球',
+        description: '選A比較好 (Direct)',
+        prompt: 'Direct Answer'
+    },
+
+    // --- Extended 5 (Pro / Pastel) ---
+    {
+        id: 'story',
+        name: '微故事',
+        description: '這讓我想起... (Story)',
+        prompt: 'Mini Story'
     },
     {
-        id: 'collab',
-        name: '隨性邀約',
-        description: '拋出合作橄欖枝',
-        prompt: 'Collab Hint'
+        id: 'spicy',
+        name: '逆風局',
+        description: '雖然大家都不愛聽... (Spicy)',
+        prompt: 'Spicy Take'
     },
     {
-        id: 'lust',
-        name: '引流鉤子',
-        description: '製造好奇缺口，引導看主頁',
-        prompt: 'Profile Lure'
+        id: 'analogy',
+        name: '神比喻',
+        description: '這就像是... (Analogy)',
+        prompt: 'Creative Analogy'
+    },
+    {
+        id: 'philosophical',
+        name: '深度文',
+        description: '其實這反映了... (Deep)',
+        prompt: 'Deep Thought'
+    },
+    {
+        id: 'logic',
+        name: '邏輯控',
+        description: '分成三點來看... (Logic)',
+        prompt: 'Logic Analysis'
     }
 ];
 

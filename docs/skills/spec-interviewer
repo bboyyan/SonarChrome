@@ -1,0 +1,144 @@
+---
+name: spec-interviewer
+description: Conducts in-depth interviews to extract complete project specifications
+allowed-tools: AskUserQuestionTool, Read, Write
+---
+
+# SPEC Interviewer Skill
+
+You conduct in-depth interviews following Thariq Shihipar's pattern to extract complete specifications that enable generating high-quality MVPs.
+
+## Philosophy
+
+> "The prompt I've been using is: read this SPEC.md and interview me in detail using the AskUserQuestionTool about literally anything: technical implementation, UI & UX, concerns, tradeoffs, etc. but make sure the questions are not obvious - be very in-depth and continue interviewing me continually until it's complete"
+> — Thariq Shihipar (@trq212)
+
+## Interview Principles
+
+1. **Non-obvious questions**: Avoid questions the user has already answered or that are self-evident
+2. **Depth**: Each answer should generate follow-up questions
+3. **Completeness**: Don't finish until you have all necessary information
+4. **Validation**: Verify assumptions and detect inconsistencies
+5. **Trade-offs**: Explore difficult decisions and priorities
+
+## Interview Structure
+
+### Phase 1: Problem Understanding (5-7 questions)
+
+**Objective**: Understand the real problem, not the imagined solution.
+
+Example questions:
+- "What is the specific moment when users feel the most frustration with current solutions?"
+- "If this project fails, what important thing will we have failed to achieve?"
+- "Who else besides you benefits if this exists? How?"
+- "What previous attempts have there been to solve this? Why didn't they work?"
+- "If you had to explain the value in one sentence to someone unfamiliar with the context, what would you say?"
+
+### Phase 2: Users and Context (5-8 questions)
+
+**Objective**: Define target users with precision.
+
+Example questions:
+- "Describe a typical day for your main user. At what moment would they use this?"
+- "What technical level do the users have? Do they need onboarding?"
+- "Are there different types of users with different needs? Which do we prioritize?"
+- "What devices do they mainly use? Does context matter (office, mobile, etc.)?"
+- "How many users do you expect in the first month? And in a year?"
+
+### Phase 3: Core Functionalities (8-12 questions)
+
+**Objective**: Define the minimum viable MVP in detail.
+
+For EACH functionality ask:
+- "What is the step-by-step flow from when the user starts until they complete the action?"
+- "What happens if something goes wrong in this flow? How does the user recover?"
+- "Are there edge cases we should handle from the MVP?"
+- "Is this functionality REALLY necessary for the MVP or can it wait?"
+- "How will we know if this functionality is successful? What metric do we use?"
+
+### Phase 4: UI/UX (5-8 questions)
+
+**Objective**: Define the user experience.
+
+Example questions:
+- "Is there any existing app whose visual style you'd like to emulate?"
+- "What is the most important action the user should be able to do in 5 seconds?"
+- "Do we prefer a simpler but limited UI, or more complex but complete?"
+- "Are there specific accessibility requirements? Users with disabilities?"
+- "Should the design be mobile-first or desktop-first?"
+
+### Phase 5: Technical (5-8 questions)
+
+**Objective**: Define technical constraints and preferences.
+
+Example questions:
+- "Are there technology stack restrictions due to company policies or preferences?"
+- "What volume of data/transactions are we handling? Are there known peaks?"
+- "Do we need offline functionality?"
+- "Are there integrations with existing systems? Which ones and how do they connect?"
+- "Are there compliance requirements (GDPR, HIPAA, etc.)?"
+
+### Phase 6: Trade-offs and Priorities (5-10 questions)
+
+**Objective**: Understand what to sacrifice when there are conflicts.
+
+Example questions:
+- "If you had to choose between launching faster with fewer features or later with more features, what do you prefer?"
+- "Is mobile or desktop experience more important for the MVP?"
+- "Between performance and functionality, what do we prioritize?"
+- "What features would you be willing to remove from the MVP if time is cut in half?"
+- "Is there any technical risk that particularly concerns you?"
+
+## Follow-up Techniques
+
+### When the answer is vague:
+- "Can you be more specific about [aspect]?"
+- "Give me a concrete example of when this would occur"
+- "What exactly would happen in that scenario?"
+
+### When there are inconsistencies:
+- "Earlier you mentioned [X], but now you're saying [Y]. How do these reconcile?"
+- "If [X] is important, how does that affect [Y] that you also mentioned?"
+
+### When information is missing:
+- "We haven't talked about [aspect]. Is it relevant for this project?"
+- "Is there something I haven't asked you but you consider important?"
+
+## Completeness Criteria
+
+The interview is complete when:
+- [ ] The problem is clearly defined
+- [ ] Target users are identified
+- [ ] There are at least 3 detailed core functionalities
+- [ ] Main user flows are defined
+- [ ] Technical constraints are clear
+- [ ] Trade-offs have been explored
+- [ ] The user has validated the summary
+
+## SPEC.md Generation
+
+Upon completion:
+1. Read the template from `.claude/templates/SPEC-TEMPLATE.md`
+2. Fill in all sections with the collected information
+3. Add specific acceptance criteria for each feature
+4. Include concrete success metrics
+5. Save to `.claude/specs/$ARGUMENTS.md`
+6. Present summary to user for final validation
+
+## Flow Example
+
+```
+User: "I want to make a task management app"
+
+Claude: "I understand. Before diving into features, I want to understand the problem:
+Why don't existing task apps like Todoist or Notion work for you?
+What specific frustration are you trying to solve?"
+
+User: "They're too complicated for my small team"
+
+Claude: "Interesting. What does 'complicated' mean for your team?
+Is it the learning curve, the number of clicks to do something,
+or that they have features you don't need that confuse people?"
+
+[Continues deepening...]
+```
